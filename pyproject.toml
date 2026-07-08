@@ -1,0 +1,39 @@
+# Root of the uv workspace. The installable packages live in packages/*; this
+# root is a virtual workspace (no [project]) that ties them together and holds
+# shared dev-tool config. uv.lock (committed) pins the whole graph reproducibly.
+
+[tool.uv.workspace]
+members = ["packages/engine", "packages/api", "packages/cli"]
+
+[tool.uv.sources]
+# api and cli depend on the engine — resolve it from the workspace, never PyPI.
+vllm-calc-engine = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8,<10",
+    "ruff>=0.15,<0.16",
+    "mypy>=1.11,<3",
+    "httpx>=0.27",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["packages/engine/src", "packages/api/src", "packages/cli/src", "validation"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+namespace_packages = true
+explicit_package_bases = true
+mypy_path = "packages/engine/src:packages/api/src:packages/cli/src"
+exclude = ['/\.venv/', '/build/', '/dist/', '/node_modules/', '^web/']
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib"
+testpaths = ["packages/engine/tests", "packages/api/tests", "packages/cli/tests"]
+pythonpath = ["packages/engine/src", "packages/api/src", "packages/cli/src"]

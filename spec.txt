@@ -1,0 +1,74 @@
+vllm-calc — VRAM Calculator Spec (v1)
+=====================================
+
+Estimates the VRAM required to serve an OSS LLM with vLLM, gives a go/no-go
+decision against a chosen GPU, and generates the `vllm serve` command.
+Scope: inference only, tensor-parallel (TP) single-node. Errs conservative
+(over-estimates) so "fits" never turns into a real-world OOM.
+
+
+CORE FORMULAS (per-GPU model)
+-----------------------------
+Formula                                                                What it tells you
+weights_total      = params × bytes_per_param                          Raw VRAM floor. MoE: params = TOTAL (all experts resident), NOT active.
+kv_bytes_per_token = 2 × kv_heads × head_dim × kv_dtype_bytes × layers KV growth per token (GQA-aware; MHA/GQA/MQA all covered by kv_heads).
+weights_per_gpu    = weights_total / TP                                Weights shard cleanly across TP GPUs.
+kv_per_gpu(seqs)   = kv_bytes_per_token × ctx_len × seqs / min(TP, kv_heads)   KV shards by KV heads — but STOPS at min(TP, kv_heads) (replication wall).
+overhead_per_gpu   = fixed_context + activation + cuda_graphs          Non-weight, non-KV memory (see breakdown below). Paid on EVERY GPU.
+available_for_kv   = gpu_util × vram_per_gpu − weights_per_gpu − overhead_per_gpu   VRAM left for the KV cache on one GPU.
+max_concurrent     = min(max_num_seqs_cap, floor((available_for_kv / kv_bytes_per_token) / ctx_len))   Hardware serving capacity (worst-case).
+
+HEADLINE RESULT
+  fits  ⟺  max_seqs ≤ max_concurrent
+  e.g. "You asked for 32; this GPU supports up to 47  ✅"
+       "You asked for 64; supports 47  ❌ — cut concurrency or context."
+
+
+OVERHEAD BREAKDOWN (replaces the old `weights × 5%`)
+---------------------------------------------------
+Overhead does NOT scale with weights. Three mechanisms, three scaling laws:
+  1. fixed_context : ~1–2 GB per GPU (CUDA context, kernels, cuBLAS/cuDNN); +~0.5 GB/GPU NCCL when TP>1. Independent of model size.
+  2. activation    : ≈ max_num_batched_tokens × hidden_size × dtype_bytes × k  (k = small single-digit). Bounded by chunked-prefill budget, NOT ctx_len. Typically a few hundred MB – 1.5 GB.
+  3. cuda_graphs   : ~0.5–2 GB for larger models; 0 if enforce_eager=True.
+UI: show one aggregate "overhead" number by default, expandable to the three terms.
+
+
+KEY INPUTS
+----------
+  GPU preset      : 4090, A100, H100, H200, L40S… or custom (vram_per_gpu, count)
+  Model preset    : Llama 3.1/3.3, Mistral, Qwen, DeepSeek, Phi… or custom
+                    (params[total], layers, kv_heads, head_dim, hidden_size, is_moe, [active_params])
+  Quantization    : FP16 → AWQ/GPTQ 4-bit — affects BOTH weights (bytes_per_param) and KV (kv_dtype_bytes)
+  Context length  : ctx_len
+  Concurrency     : max_seqs (desired), max_num_seqs_cap (vLLM batch cap, default 256)
+  gpu_memory_utilization : gpu_util (default 0.9)
+  Tensor parallelism     : TP
+  Advanced levers : max_num_batched_tokens, enforce_eager
+
+
+VALIDATION & WARNINGS
+---------------------
+  - Require: num_attention_heads % TP == 0  AND  num_kv_heads % TP == 0
+  - Require: TP == gpu_count (v1 is TP-only)
+  - WARN when TP > num_kv_heads: KV cache won't shard further (replication wall);
+    per-GPU KV stays flat while extra GPUs only add overhead — reduce TP or (future) use pipeline parallelism.
+  - LABEL max_concurrent as conservative: assumes every sequence fills the full
+    ctx_len; PagedAttention packs by actual tokens, so real capacity is usually higher.
+  - CAVEAT: estimate is HIGH (safe) for MLA models (DeepSeek — compressed latent KV,
+    ~57× smaller) and sliding-window models (Mistral/Gemma — KV capped at window).
+    Generic formula intentionally does not branch for these in v1.
+
+
+OUTPUT
+------
+  - VRAM breakdown visualization (weights / KV / overhead) vs. gpu_util × vram_per_gpu, per GPU
+  - Go/no-go headline sentence (fits ⟺ max_seqs ≤ max_concurrent)
+  - Generated, ready-to-run `vllm serve` command
+
+
+DEFERRED (post-v1)
+------------------
+  - Per-architecture KV branching: MLA (kv_lora_rank + qk_rope_head_dim) and
+    sliding-window (min(ctx_len, window)) for tighter DeepSeek/Mistral/Gemma numbers
+  - Pipeline parallelism (splits layers; PP divisor on weights & KV; no head-divisibility constraint)
+  - Speculative decoding, chunked-prefill precision, throughput / active-param modeling

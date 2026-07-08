@@ -1,0 +1,358 @@
+<title>vllm-calc — Design Directions</title>
+<style>
+  :root {
+    --bg: #F1F5F9; --surface: #FFFFFF; --surface-2: #F8FAFC;
+    --ink: #0F172A; --muted: #64748B; --faint: #94A3B8; --border: #E2E8F0;
+    --accent: #4F46E5; --accent-soft: #EEF0FF;
+    --fit: #16A34A; --fit-soft: #DCFCE7; --nofit: #DC2626; --nofit-soft: #FEE2E2;
+    --warn: #B45309; --warn-soft: #FEF3C7;
+    --c-weights: #4F46E5; --c-kv: #0D9488; --c-overhead: #94A3B8;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --r: 10px; --shadow: 0 1px 2px rgba(15,23,42,.06), 0 8px 24px -12px rgba(15,23,42,.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0B1120; --surface: #131C2E; --surface-2: #0F1728;
+      --ink: #E7ECF4; --muted: #94A3B8; --faint: #64748B; --border: #1E293B;
+      --accent: #818CF8; --accent-soft: #1E2547;
+      --fit: #34D399; --fit-soft: #0C2A22; --nofit: #F87171; --nofit-soft: #33161A;
+      --warn: #FBBF24; --warn-soft: #2E2410;
+      --c-weights: #818CF8; --c-kv: #2DD4BF; --c-overhead: #64748B;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 30px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #F1F5F9; --surface: #FFFFFF; --surface-2: #F8FAFC;
+    --ink: #0F172A; --muted: #64748B; --faint: #94A3B8; --border: #E2E8F0;
+    --accent: #4F46E5; --accent-soft: #EEF0FF;
+    --fit: #16A34A; --fit-soft: #DCFCE7; --nofit: #DC2626; --nofit-soft: #FEE2E2;
+    --warn: #B45309; --warn-soft: #FEF3C7;
+    --c-weights: #4F46E5; --c-kv: #0D9488; --c-overhead: #94A3B8;
+    --shadow: 0 1px 2px rgba(15,23,42,.06), 0 8px 24px -12px rgba(15,23,42,.18);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0B1120; --surface: #131C2E; --surface-2: #0F1728;
+    --ink: #E7ECF4; --muted: #94A3B8; --faint: #64748B; --border: #1E293B;
+    --accent: #818CF8; --accent-soft: #1E2547;
+    --fit: #34D399; --fit-soft: #0C2A22; --nofit: #F87171; --nofit-soft: #33161A;
+    --warn: #FBBF24; --warn-soft: #2E2410;
+    --c-weights: #818CF8; --c-kv: #2DD4BF; --c-overhead: #64748B;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 30px -14px rgba(0,0,0,.6);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans);
+    line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font-size: 30px; letter-spacing: -.02em; margin: 0 0 6px; text-wrap: balance; }
+  .lede { color: var(--muted); max-width: 62ch; margin: 0 0 8px; }
+  .eyebrow { text-transform: uppercase; letter-spacing: .09em; font-size: 12px; font-weight: 600;
+    color: var(--accent); margin: 0 0 10px; }
+  .mono { font-family: var(--mono); }
+  .tnum { font-variant-numeric: tabular-nums; }
+  header .bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .toggle { font: inherit; font-size: 13px; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+  .toggle:hover { border-color: var(--accent); }
+  .toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .direction { margin-top: 40px; }
+  .dir-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; flex-wrap: wrap; }
+  .dir-num { font-family: var(--mono); font-size: 13px; color: var(--accent); font-weight: 600; }
+  .dir-head h2 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
+  .dir-desc { color: var(--muted); font-size: 14px; margin: 0 0 16px; max-width: 70ch; }
+  .best { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+  .best b { color: var(--ink); font-weight: 600; }
+
+  .mock { background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    box-shadow: var(--shadow); overflow: hidden; }
+  .mock-top { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-bottom: 1px solid var(--border);
+    background: var(--surface-2); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+  .brand { font-weight: 700; letter-spacing: -.01em; }
+  .brand span { color: var(--accent); }
+  .mock-top .ver { margin-left: auto; font-size: 11px; color: var(--faint); font-family: var(--mono); }
+
+  /* inputs */
+  .group-label { text-transform: uppercase; letter-spacing: .07em; font-size: 11px; font-weight: 600;
+    color: var(--faint); margin: 0 0 8px; }
+  .field { margin-bottom: 12px; }
+  .field > label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .control { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 11px;
+    font-size: 13px; }
+  .control .val { font-family: var(--mono); font-weight: 600; }
+  .control .chev { color: var(--faint); }
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 2px 8px;
+    border-radius: 999px; border: 1px solid var(--border); color: var(--muted); background: var(--surface); }
+  .from-preset { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    background: var(--accent-soft); }
+
+  /* verdict */
+  .verdict { display: flex; align-items: center; gap: 12px; border-radius: 12px; padding: 14px 16px; }
+  .verdict.fit { background: var(--fit-soft); border: 1px solid color-mix(in srgb, var(--fit) 35%, transparent); }
+  .verdict.nofit { background: var(--nofit-soft); border: 1px solid color-mix(in srgb, var(--nofit) 35%, transparent); }
+  .verdict .icon { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+    font-weight: 700; color: #fff; flex: none; }
+  .verdict.fit .icon { background: var(--fit); }
+  .verdict.nofit .icon { background: var(--nofit); }
+  .verdict .headline { font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
+  .verdict .sub { font-size: 12.5px; color: var(--muted); }
+  .verdict.fit .headline { color: color-mix(in srgb, var(--fit) 78%, var(--ink)); }
+  .verdict.nofit .headline { color: color-mix(in srgb, var(--nofit) 80%, var(--ink)); }
+
+  /* vram bar */
+  .bar-head { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin: 2px 0 6px; }
+  .bar { position: relative; height: 30px; border-radius: 7px; background: var(--surface-2);
+    border: 1px solid var(--border); display: flex; gap: 2px; padding: 2px; overflow: hidden; }
+  .seg { height: 100%; border-radius: 4px; }
+  .seg.w { background: var(--c-weights); }
+  .seg.kv { background: var(--c-kv); }
+  .seg.oh { background: var(--c-overhead); }
+  .budget { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); }
+  .budget::after { content: "budget"; position: absolute; top: -15px; right: -2px; font-size: 9px; color: var(--muted);
+    font-family: var(--mono); white-space: nowrap; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 9px; font-size: 12px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+  .sw { width: 10px; height: 10px; border-radius: 3px; }
+  .sw.w { background: var(--c-weights); } .sw.kv { background: var(--c-kv); } .sw.oh { background: var(--c-overhead); }
+
+  /* remediation */
+  .remed { margin-top: 12px; }
+  .remed .lbl { font-size: 12px; color: var(--muted); margin-bottom: 7px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { font-size: 12.5px; font-family: var(--mono); background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 10px; cursor: pointer; color: var(--ink); }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chip b { color: var(--fit); }
+
+  /* command */
+  .cmd { position: relative; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; font-family: var(--mono); font-size: 12.5px; color: var(--ink); overflow-x: auto; }
+  .cmd .flag { color: var(--accent); }
+  .cmd .copy { position: absolute; top: 8px; right: 8px; font-family: var(--sans); font-size: 11px;
+    border: 1px solid var(--border); background: var(--surface); border-radius: 6px; padding: 3px 9px; color: var(--muted); }
+  .callout { display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px; background: var(--warn-soft);
+    border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); border-radius: 9px; padding: 10px 12px;
+    color: color-mix(in srgb, var(--warn) 55%, var(--ink)); }
+
+  /* layout A: control panel */
+  .a-grid { display: grid; grid-template-columns: 300px 1fr; gap: 0; }
+  .a-inputs { padding: 18px; border-right: 1px solid var(--border); }
+  .a-result { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .adv { margin-top: 4px; font-size: 12px; color: var(--faint); display: flex; align-items: center; gap: 6px; }
+
+  /* layout B: verdict-first */
+  .b-top { padding: 22px 22px 6px; text-align: center; }
+  .b-verdict { max-width: 520px; margin: 0 auto; }
+  .b-inputrow { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; padding: 14px 22px; }
+  .b-pill { display: flex; flex-direction: column; gap: 2px; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 9px; padding: 7px 12px; min-width: 96px; }
+  .b-pill .k { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); }
+  .b-pill .v { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+  .b-body { padding: 4px 22px 22px; max-width: 640px; margin: 0 auto; }
+
+  /* layout C: inspector */
+  .c-grid { display: grid; grid-template-columns: 230px 1fr 220px; }
+  .c-rail { padding: 16px; border-right: 1px solid var(--border); background: var(--surface-2); }
+  .c-main { padding: 20px; }
+  .c-explain { padding: 16px; border-left: 1px solid var(--border); background: var(--surface-2); font-size: 12px;
+    color: var(--muted); }
+  .c-explain h4 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--faint); }
+  .c-explain .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dashed var(--border);
+    font-family: var(--mono); }
+  .c-hero-num { font-size: 34px; font-weight: 700; letter-spacing: -.02em; font-family: var(--mono); }
+  .c-hero-num .u { font-size: 16px; color: var(--muted); font-weight: 500; }
+
+  .rail-note { font-size: 11px; color: var(--faint); margin-top: 14px; line-height: 1.5; }
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--faint); font-size: 12.5px; }
+  @media (max-width: 760px) {
+    .a-grid, .c-grid { grid-template-columns: 1fr; }
+    .a-inputs { border-right: none; border-bottom: 1px solid var(--border); }
+    .c-rail { border-right: none; border-bottom: 1px solid var(--border); }
+    .c-explain { border-left: none; border-top: 1px solid var(--border); }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="bar">
+      <div>
+        <p class="eyebrow">vllm-calc · UX design directions</p>
+        <h1>Three ways to answer &ldquo;will it fit?&rdquo;</h1>
+      </div>
+      <button class="toggle" id="themeBtn" aria-label="Toggle light or dark theme">◑ Toggle theme</button>
+    </div>
+    <p class="lede">Same engine, same tokens (slate + indigo, reserved green / red / amber for status), three
+      layouts for the core loop: <b>adjust an input → see the verdict + VRAM breakdown → fix it → copy the command</b>.
+      Each mock shows the identical scenario: Llama-3.3-70B, AWQ 4-bit, 2× A100 80GB, TP=2.</p>
+  </header>
+
+  <!-- DIRECTION 1 -->
+  <section class="direction">
+    <div class="dir-head"><span class="dir-num">01</span><h2>Control Panel</h2></div>
+    <p class="dir-desc">Inputs left, living answer right — the workstation layout. Everything visible at once;
+      nothing hidden behind tabs. Highest information density, best for the expert who tweaks many knobs.</p>
+    <div class="mock">
+      <div class="mock-top"><span class="dot"></span><span class="brand">vllm<span>-calc</span></span>
+        <span class="ver">calibrated for vLLM 0.13x</span></div>
+      <div class="a-grid">
+        <div class="a-inputs">
+          <p class="group-label">Model</p>
+          <div class="field"><div class="control"><span>Llama-3.3-70B</span><span class="chev">▾</span></div></div>
+          <div class="field"><span class="pill from-preset">◆ from preset · 80 layers · 8 KV heads</span></div>
+          <p class="group-label" style="margin-top:16px">GPU &amp; parallelism</p>
+          <div class="field"><label>GPU</label><div class="control"><span>A100 80GB</span><span class="val">×2</span></div></div>
+          <div class="field"><label>Tensor parallelism</label><div class="control"><span>TP</span><span class="val">2</span></div></div>
+          <p class="group-label" style="margin-top:16px">Workload</p>
+          <div class="field"><label>Quantization</label><div class="control"><span>AWQ 4-bit</span><span class="chev">▾</span></div></div>
+          <div class="field"><label>Context length</label><div class="control"><span>tokens</span><span class="val">32,768</span></div></div>
+          <div class="field"><label>Concurrent sequences</label><div class="control"><span>max_seqs</span><span class="val">32</span></div></div>
+          <div class="adv">▸ Advanced (gpu-util, max-num-batched-tokens, enforce-eager)</div>
+        </div>
+        <div class="a-result">
+          <div class="verdict fit">
+            <div class="icon" aria-hidden="true">✓</div>
+            <div><div class="headline">Fits — supports up to 41 concurrent</div>
+              <div class="sub">You asked for 32. Per-GPU: 46.8 GB used of 72.0 GB budget.</div></div>
+          </div>
+          <div>
+            <div class="bar-head"><span>Per-GPU VRAM</span><span class="mono tnum">46.8 / 72.0 GiB</span></div>
+            <div class="bar" role="img" aria-label="Weights 17.5 gibibytes, KV cache 24.3, overhead 5.0, against a 72 gibibyte budget">
+              <div class="seg w" style="width:24%"></div>
+              <div class="seg kv" style="width:34%"></div>
+              <div class="seg oh" style="width:7%"></div>
+              <div class="budget" style="left:90%"></div>
+            </div>
+            <div class="legend">
+              <span><i class="sw w"></i>Weights 17.5</span>
+              <span><i class="sw kv"></i>KV cache 24.3</span>
+              <span><i class="sw oh"></i>Overhead 5.0 ▸</span>
+            </div>
+          </div>
+          <div class="cmd"><button class="copy">Copy</button>vllm serve <span class="flag">meta-llama/Llama-3.3-70B-Instruct</span> \
+  <span class="flag">--tensor-parallel-size</span> 2 <span class="flag">--quantization</span> awq \
+  <span class="flag">--max-model-len</span> 32768 <span class="flag">--gpu-memory-utilization</span> 0.9</div>
+        </div>
+      </div>
+    </div>
+    <p class="best"><b>Best for:</b> power users; matches the two-region layout in the spec. <b>Risk:</b> can feel busy for newcomers.</p>
+  </section>
+
+  <!-- DIRECTION 2 -->
+  <section class="direction">
+    <div class="dir-head"><span class="dir-num">02</span><h2>Verdict-First</h2></div>
+    <p class="dir-desc">The answer is the hero. A big, unmissable verdict on top; inputs condensed into a quiet
+      row of pills beneath it. Calmest, most legible — leans hardest into &ldquo;the answer is the interface.&rdquo;</p>
+    <div class="mock">
+      <div class="mock-top"><span class="dot"></span><span class="brand">vllm<span>-calc</span></span>
+        <span class="ver">calibrated for vLLM 0.13x</span></div>
+      <div class="b-top">
+        <div class="verdict nofit b-verdict">
+          <div class="icon" aria-hidden="true">✗</div>
+          <div style="text-align:left"><div class="headline">Won&rsquo;t fit at 128k context</div>
+            <div class="sub">Needs ~104 GB/GPU · budget is 72 GB (2× A100 80GB, TP=2)</div></div>
+        </div>
+      </div>
+      <div class="b-inputrow">
+        <div class="b-pill"><span class="k">Model</span><span class="v">Llama-3.3-70B</span></div>
+        <div class="b-pill"><span class="k">GPU</span><span class="v">A100 ×2</span></div>
+        <div class="b-pill"><span class="k">Quant</span><span class="v">AWQ 4-bit</span></div>
+        <div class="b-pill"><span class="k">Context</span><span class="v">128,000</span></div>
+        <div class="b-pill"><span class="k">Max seqs</span><span class="v">32</span></div>
+        <div class="b-pill"><span class="k">TP</span><span class="v">2</span></div>
+      </div>
+      <div class="b-body">
+        <div class="bar-head"><span>Per-GPU VRAM</span><span class="mono tnum">104.2 / 72.0 GiB</span></div>
+        <div class="bar" role="img" aria-label="Over budget: KV cache dominates at 128k context">
+          <div class="seg w" style="width:17%"></div>
+          <div class="seg kv" style="width:73%"></div>
+          <div class="seg oh" style="width:5%"></div>
+          <div class="budget" style="left:69%"></div>
+        </div>
+        <div class="legend">
+          <span><i class="sw w"></i>Weights 17.5</span>
+          <span><i class="sw kv"></i>KV cache 81.7</span>
+          <span><i class="sw oh"></i>Overhead 5.0</span>
+        </div>
+        <div class="remed">
+          <div class="lbl">Nearest fitting configurations — click to apply:</div>
+          <div class="chips">
+            <button class="chip">context → <b>90k</b></button>
+            <button class="chip">KV cache → <b>FP8</b></button>
+            <button class="chip">GPUs → <b>TP=4</b></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="best"><b>Best for:</b> converting skeptics fast + the remediation moment. <b>Risk:</b> experts may want more knobs on-screen.</p>
+  </section>
+
+  <!-- DIRECTION 3 -->
+  <section class="direction">
+    <div class="dir-head"><span class="dir-num">03</span><h2>Inspector</h2></div>
+    <p class="dir-desc">IDE-adjacent, three-pane. Inputs rail, the breakdown as centerpiece with a headline number,
+      and an always-open <em>explain</em> panel that shows the math. Leans into &ldquo;show your work&rdquo; — the trust play.</p>
+    <div class="mock">
+      <div class="mock-top"><span class="dot"></span><span class="brand">vllm<span>-calc</span></span>
+        <span class="ver">calibrated for vLLM 0.13x</span></div>
+      <div class="c-grid">
+        <div class="c-rail">
+          <p class="group-label">Config</p>
+          <div class="field"><label>Model</label><div class="control"><span>Llama-3.3-70B</span></div></div>
+          <div class="field"><label>GPU</label><div class="control"><span>A100 80GB</span><span class="val">×2</span></div></div>
+          <div class="field"><label>Quant</label><div class="control"><span>AWQ</span></div></div>
+          <div class="field"><label>Context</label><div class="control val" style="justify-content:flex-start">32,768</div></div>
+          <div class="field"><label>TP</label><div class="control val" style="justify-content:flex-start">2</div></div>
+          <p class="rail-note">MLA / sliding-window models show a conservative (over-provisioned) estimate.</p>
+        </div>
+        <div class="c-main">
+          <div class="verdict fit" style="margin-bottom:16px">
+            <div class="icon" aria-hidden="true">✓</div>
+            <div><div class="headline">Fits</div><div class="sub">up to 41 concurrent sequences</div></div>
+          </div>
+          <div class="c-hero-num tnum">46.8<span class="u"> / 72.0 GiB per GPU</span></div>
+          <div class="bar" style="margin-top:12px" role="img" aria-label="Weights, KV cache and overhead within budget">
+            <div class="seg w" style="width:24%"></div>
+            <div class="seg kv" style="width:34%"></div>
+            <div class="seg oh" style="width:7%"></div>
+            <div class="budget" style="left:90%"></div>
+          </div>
+          <div class="legend">
+            <span><i class="sw w"></i>Weights</span><span><i class="sw kv"></i>KV cache</span><span><i class="sw oh"></i>Overhead</span>
+          </div>
+          <div class="cmd" style="margin-top:16px"><button class="copy">Copy</button>vllm serve <span class="flag">…/Llama-3.3-70B</span> <span class="flag">--tensor-parallel-size</span> 2 <span class="flag">--quantization</span> awq <span class="flag">--max-model-len</span> 32768</div>
+        </div>
+        <div class="c-explain">
+          <h4>Show your work (per GPU)</h4>
+          <div class="row"><span>Weights ÷ TP</span><span>17.5</span></div>
+          <div class="row"><span>KV cache ÷ TP</span><span>24.3</span></div>
+          <div class="row"><span>Fixed ctx</span><span>1.6</span></div>
+          <div class="row"><span>Activations</span><span>1.9</span></div>
+          <div class="row"><span>CUDA graphs</span><span>1.5</span></div>
+          <div class="row" style="border-bottom:none;color:var(--ink);font-weight:600"><span>Total</span><span>46.8</span></div>
+          <p class="rail-note" style="margin-top:12px">GQA: 8 KV heads · TP=2 ✓ divides. Budget = 0.9 × 80 GiB.</p>
+        </div>
+      </div>
+    </div>
+    <p class="best"><b>Best for:</b> the &ldquo;first-time trust&rdquo; moment — the math is always visible. <b>Risk:</b> widest layout; the explain panel needs horizontal room.</p>
+  </section>
+
+  <footer>
+    Static mockups for direction-setting — real content, shared tokens, both themes. VRAM-bar hues (indigo / teal / slate)
+    are held distinct from the reserved status colors and pending a formal colorblind-contrast validation before build.
+  </footer>
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById('themeBtn');
+    var root = document.documentElement;
+    btn.addEventListener('click', function () {
+      var cur = root.getAttribute('data-theme');
+      if (!cur) cur = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      root.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+    });
+  })();
+</script>

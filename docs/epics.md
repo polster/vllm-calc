@@ -1,0 +1,513 @@
+---
+stepsCompleted: ['step-01-validate-prerequisites', 'step-02-design-epics', 'step-03-create-stories', 'step-04-final-validation']
+status: 'complete'
+completedAt: '2026-07-08'
+inputDocuments:
+  - docs/prd.md
+  - docs/architecture.md
+  - docs/ux-design-specification.md
+  - docs/product-brief-vllm-calc.md
+  - docs/product-brief-vllm-calc-distillate.md
+---
+
+# vllm-calc - Epic Breakdown
+
+## Overview
+
+This document provides the complete epic and story breakdown for vllm-calc, decomposing the requirements from the PRD, UX Design, and Architecture into implementable stories.
+
+## Requirements Inventory
+
+### Functional Requirements
+
+FR1: A user can select a GPU from a curated preset (model, VRAM, count) or define a custom GPU (VRAM per GPU, count).
+FR2: A user can select a model from a curated preset or define a custom model by its architecture parameters (total params, layers, kv_heads, head_dim, hidden_size, MoE flag).
+FR3: A user can specify a quantization scheme that affects both weights and KV cache (e.g. FP16, FP8, AWQ/GPTQ 4-bit).
+FR4: A user can specify context length, desired concurrency (max_seqs), gpu_memory_utilization, and tensor-parallel size.
+FR5: A user can adjust advanced levers that affect overhead (e.g. max_num_batched_tokens, enforce_eager).
+FR6: The system can compute per-GPU VRAM as weights + GQA-aware KV cache + a three-term overhead (fixed context + activations + CUDA graphs).
+FR7: The system can apply tensor-parallel sharding per GPU, dividing weights and KV while replicating overhead across GPUs.
+FR8: The system can compare required VRAM against the usable budget (gpu_memory_utilization × per-GPU VRAM) and return a go/no-go verdict.
+FR9: The system can compute MoE model weights from total (not active) parameters.
+FR10: The system can validate parallelism constraints (TP divides attention-heads and KV-heads; TP equals GPU count) and reject invalid configurations with a reason.
+FR11: The system can warn when TP exceeds the model's KV-head count (KV-replication wall), indicating KV will not shard further.
+FR12: The system can compute maximum concurrent sequences supported (bounded by the KV budget and the batch cap).
+FR13: The system can express the verdict as a capacity statement comparing requested vs. supported concurrency.
+FR14: The system can label capacity results as conservative/worst-case (full-context-per-sequence assumption).
+FR15: On a no-go, the system can suggest one or more nearest fitting configurations (reduced context, different quantization, higher TP / more GPUs).
+FR16: A user can apply a suggested configuration and recompute.
+FR17: The system can generate a runnable vllm serve command whose flags match the computed configuration.
+FR18: A user can copy the generated command.
+FR19: A user can view a per-GPU VRAM breakdown visualization (weights / KV / overhead vs. usable budget).
+FR20: A user can expand the overhead figure into its three component terms.
+FR21: The system can flag when an estimate is a known over-provision (MLA / sliding-window) or the architecture is unsupported, rather than returning a silently-wrong number.
+FR22: The system can report the vLLM version range the result is calibrated for.
+FR23: A user can perform a calculation through a browser SPA.
+FR24: A developer can perform a calculation through the HTTP API.
+FR25: A developer can perform a calculation through the CLI, which returns machine-readable output (--json) and exits non-zero on a no-go for CI gating.
+FR26: An operator can run the backend locally (Docker) with no external runtime dependencies, so no configuration data leaves their network.
+FR27: All surfaces return identical results for identical inputs (single shared engine).
+FR28: A contributor can add a model or GPU preset as a version-controlled file conforming to a defined schema.
+FR29: The system can validate preset files against the schema (in CI), ideally cross-checking a model preset against its published config.json.
+FR30: A preset carries provenance (source and last-verified information).
+FR31: The system can be validated by a harness that launches real vllm serve configurations and compares predicted vs. actually-reserved VRAM.
+FR32: The validation harness can run in CI against a pinned vLLM version range and report its pass rate.
+
+### NonFunctional Requirements
+
+NFR1: Predicted VRAM within ±10% of actual vllm serve startup reserve across the validation suite, biased to over-predict on any "fits" verdict.
+NFR2: Validation-suite pass rate ≥90% within ±10% with zero under-predictions on "fits" cases, published and CI-gated against a pinned vLLM version range.
+NFR3: The calculation is deterministic and identical across all surfaces (SPA, CLI, API).
+NFR4: Inputs outside validated coverage (MLA/sliding-window/unsupported) return a labeled/flagged result rather than an unflagged wrong number.
+NFR5: A calculation returns in under 500 ms server-side for a single request.
+NFR6: The web path requires no installation and reaches interactive state in under 3 seconds; input changes update near-instantly.
+NFR7: End-to-end time-to-answer under one minute.
+NFR8: Backend runs as a self-contained Docker image with no external runtime dependencies (air-gapped-capable).
+NFR9: The SPA is static-hostable and configurable to target any API base URL.
+NFR10: A single stateless backend instance serves typical single-team/community load; scales horizontally if needed.
+NFR11: v1 requires no authentication and stores no user accounts.
+NFR12: The public hosted instance does not persist/log identifying request content beyond anonymous opt-in usage signals; self-hosted keeps all data on-network.
+NFR13: Standard web hardening (input validation, no execution of user content, dependency-vuln scanning in CI).
+NFR14: The calculation engine is extensible to new attention types and quantization formats without core rewrites.
+NFR15: Presets are version-controlled flat files with a schema-validated contribution path; adding coverage needs no code change.
+NFR16: Results and the engine declare the vLLM version range they target.
+NFR17: The SPA meets WCAG 2.1 AA basics (keyboard nav, contrast, non-color-only fit/no-fit encoding).
+
+### Additional Requirements
+
+_(from Architecture)_
+- **STARTER / SCAFFOLD (impacts Epic 1, Story 1):** Greenfield monorepo composed from minimal official scaffolds — `create-vite` React-TS for `web/`; uv/Poetry Python workspace for `packages/{engine,api,cli}`; `pnpm` for `web`. No opinionated full-stack template. Versions pinned: Python 3.13, FastAPI ~0.139, Typer ~0.26, Pydantic v2, React 19, Vite 8.
+- **Engine as shared package:** pure, I/O-free `packages/engine` implementing the spec.txt v1 model; the sole owner of the calculation and the shared Pydantic I/O models; imported by API, CLI, and validation harness (the parity guarantor).
+- **REST API:** versioned `/v1`; `POST /v1/calculate` returns the full result object; `GET /v1/presets/{models,gpus}`, `/v1/health`, `/v1/version`. OpenAPI auto-generated; used to generate the SPA's typed client.
+- **Error contract:** structured `{error:{type,message,details?}}` with types validation / constraint_violation / unsupported / over_provision_estimate / internal.
+- **Preset store:** version-controlled **YAML** files under `presets/` with provenance fields; loaded into memory at startup; JSON Schema generated from Pydantic models.
+- **Deployment:** single Docker image serving the API (+ optionally the static SPA); env-var config (API base URL, vLLM version pin, CORS, rate-limit toggle).
+- **CI (two tiers):** (1) per-PR — lint (ruff/ESLint), type-check (mypy/tsc), unit + golden engine tests, SPA build, preset schema validation, dependency-vuln scan; (2) GPU validation harness on a self-hosted GPU runner, scheduled + on vLLM-version bumps.
+- **Units invariant:** engine computes in integer bytes only; convert to GiB at presentation edges.
+
+### UX Design Requirements
+
+UX-DR1: Establish the design-system foundation — Tailwind + Radix (shadcn/ui) with design tokens (slate + indigo palette, dark-mode default, semantic fit/no-go/warn status tokens), light + dark themes via CSS variables.
+UX-DR2: Build the **VerdictBanner** custom component (icon + headline + capacity subline + calibrated-vLLM-version label; states fit/no-go/warn/updating; wrapped in a polite ARIA live region; never color-alone).
+UX-DR3: Build the **VramBreakdownBar** custom component (SVG stacked bar weights/KV/overhead vs. budget marker; hover tooltips; expandable overhead → 3 sub-terms; states fits/over-budget/updating/flagged; `role="img"` + aria-label sentence + screen-reader table; colorblind-safe validated palette; data-viz mark specs).
+UX-DR4: Build the **RemediationChips** component (applyable "fits at 90k / FP8 / TP=4" chips; each carries the input delta it applies).
+UX-DR5: Build the **CommandBlock** component (monospace vllm serve output, syntax-tinted flags, copy affordance with "copied ✓" toast).
+UX-DR6: Implement the input surface — searchable preset comboboxes (model/GPU) with autofill + "from preset" provenance tags, custom-model inline field reveal, grouped inputs (Model / GPU & Parallelism / Workload / collapsed Advanced).
+UX-DR7: Implement the live-recompute loop — debounced (~250ms) single /calculate call on input change, in-place result update with last-valid-result persistence, no submit button, no full-screen spinner, subtle updating shimmer.
+UX-DR8: Implement URL-as-state — all inputs encoded to query params (debounced), back/forward/refresh restore the scenario, copying the URL shares it.
+UX-DR9: Implement inline, field-level validation with plain-language messages (TP divisibility, missing custom fields); last valid result stays visible while an input is invalid.
+UX-DR10: Implement honesty-flag callouts (calm amber, inline) for MLA/SWA over-provision and unsupported architectures.
+UX-DR11: Implement the pre-computed default scenario on load (no blank state — first paint shows a real result).
+UX-DR12: Implement the responsive two-region layout (inputs left / result right at ≥lg; stacks below; command block scrolls internally; no horizontal page scroll).
+UX-DR13: Implement accessibility baseline — WCAG 2.1 AA (contrast both themes, full keyboard operability, visible focus, skip-to-result link, ≥44px touch targets, prefers-reduced-motion, 200% zoom reflow) + a11y CI checks (axe-core, colorblind palette validation).
+UX-DR14: Implement the light/dark theme toggle (persisted; both themes pass contrast).
+
+### FR Coverage Map
+
+- FR1–FR4: Epic 1 — configuration input (GPU/model presets + custom, quant, workload knobs)
+- FR6–FR14: Epic 1 — core VRAM compute, TP sharding, MoE, constraints, capacity
+- FR19, FR20, FR22: Epic 1 — breakdown visualization, overhead expand, version label
+- FR23, FR24, FR27: Epic 1 — SPA + API surfaces, cross-surface parity
+- FR5: Epic 2 — advanced overhead levers
+- FR15, FR16: Epic 2 — remediation suggestions + apply
+- FR17, FR18: Epic 2 — vllm serve command generation + copy
+- FR21: Epic 2 — honest over-provision / unsupported flags
+- FR25: Epic 3 — CLI (CI-gating, --json, non-zero exit)
+- FR26: Epic 3 — locally-runnable Docker backend
+- FR28, FR29, FR30: Epic 4 — preset contribution, schema validation, provenance
+- FR31, FR32: Epic 4 — validation harness + CI pass rate
+
+## Epic List
+
+### Epic 1: Know the Answer — Core VRAM Fit Verdict
+A user picks a GPU + model preset (and workload knobs) and gets a live, trustworthy "fits / doesn't fit + capacity" verdict with a transparent per-GPU VRAM breakdown in the browser. Walking skeleton: scaffold + engine + API + core SPA.
+**FRs covered:** FR1, FR2, FR3, FR4, FR6, FR7, FR8, FR9, FR10, FR11, FR12, FR13, FR14, FR19, FR20, FR22, FR23, FR24, FR27
+**Also:** scaffold (Story 1.1), engine package + golden tests, curated YAML presets + loader, POST /v1/calculate + preset endpoints, design-system foundation (UX-DR1), VerdictBanner (UX-DR2), VramBreakdownBar (UX-DR3), input surface (UX-DR6), live-recompute loop (UX-DR7), default scenario (UX-DR11), responsive layout (UX-DR12), a11y baseline (UX-DR13), theme toggle (UX-DR14), inline validation (UX-DR9). NFR1, NFR3, NFR5, NFR6, NFR7, NFR9, NFR17.
+
+### Epic 2: Act on the Answer — Remediation & Runnable Command
+On a no-go, one-click "nearest fitting config" chips; either way, a copy-ready vllm serve command; plus honest over-provision flags and advanced levers.
+**FRs covered:** FR5, FR15, FR16, FR17, FR18, FR21
+**Also:** RemediationChips (UX-DR4), CommandBlock + copy toast (UX-DR5), honesty callouts (UX-DR10), URL-as-state (UX-DR8). NFR4.
+
+### Epic 3: Reach It Anywhere — CLI & Self-Hosted Backend
+The same engine reachable from the CLI (CI-gating, --json, non-zero exit) and as a locally-runnable Docker backend for air-gapped/self-hosted use.
+**FRs covered:** FR25, FR26
+**Also:** CLI package over the API, Docker image (+ optional static SPA), env-var config. NFR8, NFR10, NFR11, NFR12, NFR13.
+
+### Epic 4: Prove It & Grow It — Accuracy Validation & Preset Contribution
+A validation harness that checks predictions against real vllm serve (CI-gated pass rate) and a community preset-contribution path (schema-validated, provenance-tracked).
+**FRs covered:** FR28, FR29, FR30, FR31, FR32
+**Also:** GPU CI runner, published pass rate, engine extensibility for new attention/quant types. NFR2, NFR14, NFR15, NFR16.
+
+---
+
+## Epic 1: Know the Answer — Core VRAM Fit Verdict
+
+Deliver the product's central promise: a user picks a GPU + model preset, sets workload knobs, and gets a live, transparent per-GPU VRAM breakdown with a "fits / doesn't fit + capacity" verdict in the browser.
+
+### Story 1.1: Scaffold the monorepo and CI skeleton
+
+As a developer,
+I want the project scaffolded as a monorepo with tooling and a CI skeleton,
+So that every subsequent story has a consistent place to add code with lint/test gates.
+
+**Acceptance Criteria:**
+
+**Given** an empty repository
+**When** the scaffold is created
+**Then** `packages/{engine,api,cli}` exist as a Python (uv/Poetry) workspace pinned to Python 3.13, and `web/` is a `create-vite` React-TS app
+**And** ruff + mypy (Python) and ESLint + tsc (web) run clean on the empty skeleton
+**And** a `ci.yml` runs lint, type-check, unit tests, and the SPA build on every PR
+**And** `CONTRIBUTING.md` and `project-context.md` capture the consistency rules (bytes-only units, snake_case wire, engine-owned models, no calc in the SPA).
+
+**Status:** Done (scaffold verified green, 2026-07-08).
+
+**Dev Agent Record (Story 1.1):**
+- **Toolchain divergence (approved):** used pip + venv (not uv) and npm (not pnpm); documented in CONTRIBUTING.md. Python pinned `>=3.13` (env has 3.14).
+- **Verification — all green:** `ruff check` ✓ · `mypy` (strict) ✓ · `pytest` 5/5 ✓ · web `eslint` ✓ · `tsc --noEmit` ✓ · `vitest` 1/1 ✓ · `vite build` ✓ (built in 173ms).
+- **Note:** Typer needed a no-op `@app.callback()` so subcommands stay named (single-command apps collapse otherwise); relevant when `check` lands in Story 3.1.
+- **File List:** `.gitignore`, `pyproject.toml`, `README.md`, `CONTRIBUTING.md`, `project-context.md`, `.github/workflows/ci.yml`; `packages/engine/{pyproject.toml,src/vllm_calc_engine/__init__.py,tests/test_smoke.py}`; `packages/api/{pyproject.toml,src/vllm_calc_api/{__init__.py,main.py},tests/test_meta_endpoints.py}`; `packages/cli/{pyproject.toml,src/vllm_calc_cli/{__init__.py,main.py},tests/test_cli.py}`; `web/{package.json,package-lock.json,tsconfig.json,vite.config.ts,eslint.config.js,index.html,src/{main.tsx,App.tsx,App.test.tsx,test-setup.ts}}`; `presets/{README.md,models/,gpus/,schema/}`, `validation/README.md`, `docker/README.md`.
+- **Change Log:** Scaffolded the monorepo (engine/api/cli + web), tooling config (ruff/mypy/pytest, ESLint/tsc/vitest), CI workflow, and consistency-rule docs. All quality gates pass.
+
+### Review Findings (code review 2026-07-08)
+
+_Adversarial review: Blind Hunter + Edge Case Hunter + Acceptance Auditor. Gates independently re-verified green. 6 false positives dismissed._
+
+**[Review][Decision] → RESOLVED: adopt uv workspace (option 2, 2026-07-09)**
+- [x] Local `vllm-calc-engine` sibling dep resolved only in the combined `pip install`. **Resolution:** migrate Python to a **uv workspace** with a root `[tool.uv.workspace]` + `[tool.uv.sources] vllm-calc-engine = { workspace = true }`, committing a `uv.lock`. This also subsumes the loose-pins and no-Python-lockfile findings. Reverses the earlier pip decision (docs updated). [packages/*/pyproject.toml]
+
+**[Review][Patch] — ALL APPLIED & re-verified green (2026-07-09)**
+- [x] vitest 3 ↔ Vite 8 dual-Vite: pinned `vite ^7` + `@vitejs/plugin-react ^4.6.0`; `npm ls vite` now shows a single deduped `vite@7.3.6` across build + vitest. [web/package.json]
+- [x] `*.tsbuildinfo` added to `.gitignore`. [.gitignore]
+- [x] Added `addopts = "--import-mode=importlib"`. [pyproject.toml]
+- [x] Added `exclude` (`.venv`, `build`, `dist`, `node_modules`, `^web/`) under `[tool.mypy]`. [pyproject.toml]
+- [x] Pins tightened via the uv migration: `fastapi~=0.139`, `typer~=0.26`, `requires-python>=3.13,<3.15`, bounded dev-tool group; **`uv.lock` committed** pins the full graph (subsumes the loose-pins + no-lockfile findings). [packages/*/pyproject.toml, uv.lock]
+
+_Re-verification (all green): `uv run ruff` ✓ · `uv run mypy` ✓ · `uv run pytest` 5/5 ✓ · `uv sync --frozen` ✓ · web `eslint`/`tsc`/`vitest` 1/1/`vite build` ✓. CI updated to `astral-sh/setup-uv` + `uv sync --frozen`; CONTRIBUTING/project-context/README updated for uv._
+
+**[Review][Defer]**
+- [x] No committed Python lockfile (pip has none; web has package-lock.json) — reproducibility gap. Deferred: pick a lock strategy (uv.lock / pip-tools) with the workspace decision above.
+- [x] `web/package-lock.json` must be committed for CI `npm ci` — advisory; handle at first commit.
+- [x] `tsc -b` on a single non-composite tsconfig; `vite.config.ts` not type-checked by tsc — deferred, low; revisit if adopting project references.
+- [x] CI omits the dependency-vuln scan (architecture CI intent / NFR13) — deferred; not a Story 1.1 AC, add in a later epic.
+
+**Dismissed (verified false positives):** CLI missing `version`; CLI missing `[dev]` extra; `@types/react-dom` absent; `@testing-library/jest-dom` not installed; API `create_app` import gap; "frontend versions don't exist" — all contradicted by the actual files and the passing gates (blind reviewer saw an abbreviated snapshot + had a stale knowledge cutoff).
+
+### Story 1.2: Compute model weights (with quantization and MoE)
+
+As a user,
+I want the engine to compute model weight memory for a given quantization,
+So that the largest fixed component of VRAM is accurate.
+
+**Acceptance Criteria:**
+
+**Given** a model's total parameter count and a quantization scheme
+**When** `weights` is computed
+**Then** it returns integer bytes = params × bytes_per_param, with quantization mapping to the correct bytes-per-param
+**And** for a MoE model, total (not active) parameters are used
+**And** a golden-value test covers FP16, FP8, and AWQ/GPTQ 4-bit cases.
+
+### Story 1.3: Compute GQA-aware KV cache
+
+As a user,
+I want the engine to compute KV-cache memory using the model's actual KV-head count,
+So that modern GQA models are modeled correctly rather than over-counted.
+
+**Acceptance Criteria:**
+
+**Given** a model's layers, kv_heads, head_dim, kv-cache dtype, context length, and max_seqs
+**When** KV cache is computed
+**Then** it returns `2 × kv_heads × head_dim × kv_dtype_bytes × layers × ctx_len × max_seqs` in bytes
+**And** MHA (kv_heads = attention_heads) and MQA (kv_heads = 1) are covered by the same formula
+**And** golden-value tests verify a known GQA model (e.g. Llama-3-70B: 8 KV heads).
+
+### Story 1.4: Compute the three-term overhead
+
+As a user,
+I want overhead modeled as fixed context + activations + CUDA graphs,
+So that the estimate reflects what vLLM actually reserves instead of a flat percentage.
+
+**Acceptance Criteria:**
+
+**Given** GPU count, hidden_size, max_num_batched_tokens, dtype, and enforce_eager
+**When** overhead is computed
+**Then** it returns the sum of a fixed per-GPU context term (+NCCL when TP>1), an activation term bounded by the chunked-prefill token budget, and a CUDA-graph term (zero when enforce_eager)
+**And** the three sub-terms are individually returned in the result for the "show your work" UI
+**And** overhead constants are defined in one place, documented as calibration targets for the validation harness (Epic 4).
+
+### Story 1.5: Apply per-GPU tensor-parallel sharding and validate parallelism
+
+As a user,
+I want weights and KV sharded per GPU under TP with correct constraint validation,
+So that multi-GPU configurations report true per-GPU memory and reject impossible setups.
+
+**Acceptance Criteria:**
+
+**Given** a valid TP that divides attention-heads and KV-heads and equals GPU count
+**When** the per-GPU footprint is computed
+**Then** weights and KV are divided by TP (KV divisor capped at `min(TP, kv_heads)`) while overhead is applied per GPU
+**Given** TP exceeds the model's KV-head count
+**Then** the result carries a KV-replication-wall warning that KV will not shard further
+**Given** TP does not divide the heads or does not equal GPU count
+**Then** the engine raises a typed constraint error with a plain-language reason.
+
+### Story 1.6: Assemble the fit verdict and serving capacity
+
+As a user,
+I want a single result object with the go/no-go verdict and supported concurrency,
+So that I get one clear answer to "will it fit and for how many requests?"
+
+**Acceptance Criteria:**
+
+**Given** the computed weights, KV, and overhead and a gpu_memory_utilization
+**When** the result is assembled
+**Then** `available_for_kv`, `max_concurrent = min(max_num_seqs_cap, ⌊capacity/ctx_len⌋)`, and `fits ⟺ max_seqs ≤ max_concurrent` are returned
+**And** the verdict includes the capacity statement and a conservative/worst-case label on max_concurrent
+**And** the result reports the calibrated vLLM version range
+**And** a golden-value end-to-end test (a full scenario) locks the assembled numbers.
+
+### Story 1.7: Load curated presets from version-controlled YAML
+
+As a user,
+I want a curated set of model and GPU presets available,
+So that I can size common setups without hand-entering architecture params.
+
+**Acceptance Criteria:**
+
+**Given** YAML preset files under `presets/models` and `presets/gpus` conforming to the Pydantic schema
+**When** the backend starts
+**Then** presets are loaded and validated into memory, failing fast on a schema violation
+**And** the curated baseline covers the top ~15–20 models and common GPUs, each with provenance fields
+**And** each preset's `id` matches its filename stem.
+
+### Story 1.8: Expose the calculation over the HTTP API
+
+As a developer,
+I want a versioned REST endpoint that runs the engine,
+So that any surface can get identical results from one source of truth.
+
+**Acceptance Criteria:**
+
+**Given** the engine and preset store
+**When** the API is running
+**Then** `POST /v1/calculate` returns the full result object (breakdown, verdict, capacity, flags, version) as snake_case JSON
+**And** `GET /v1/presets/models`, `/v1/presets/gpus`, `/v1/health`, `/v1/version` respond correctly
+**And** engine constraint/validation errors map to the structured error contract with the right HTTP status
+**And** OpenAPI is generated and a typed client can be produced from it.
+
+### Story 1.9: Establish the SPA design-system foundation and app shell
+
+As a user,
+I want a fast, themeable single-page shell,
+So that the calculator is pleasant and legible in light and dark.
+
+**Acceptance Criteria:**
+
+**Given** the React-Vite app
+**When** the design foundation is implemented
+**Then** Tailwind + Radix (shadcn/ui) tokens define the slate/indigo palette, semantic status tokens, and light/dark themes via CSS variables
+**And** a persisted theme toggle switches themes and both pass WCAG AA contrast
+**And** the responsive two-region layout shell (inputs / result at ≥lg, stacked below) renders without horizontal page scroll.
+
+### Story 1.10: Build the input surface with live recompute
+
+As a user,
+I want to pick presets and adjust knobs and see results update live,
+So that exploring configurations feels effortless with no submit button.
+
+**Acceptance Criteria:**
+
+**Given** the app shell
+**When** the input surface is implemented
+**Then** searchable model/GPU comboboxes autofill architecture fields tagged "from preset" (still editable), grouped as Model / GPU & Parallelism / Workload / collapsed Advanced, with a "Custom model" reveal
+**And** any input change debounces (~250ms) and fires one `/v1/calculate` call, updating results in place with the last valid result persisted (no full-screen spinner)
+**And** the app loads with a pre-computed default scenario (no blank state)
+**And** invalid inputs (e.g. TP divisibility) show plain-language errors on the offending field while the last valid result stays visible.
+
+### Story 1.11: Render the verdict and VRAM breakdown
+
+As a user,
+I want an unmissable verdict and a transparent breakdown,
+So that I trust the answer and understand why.
+
+**Acceptance Criteria:**
+
+**Given** a calculation result
+**When** the result region renders
+**Then** `VerdictBanner` shows icon + headline + capacity subline + version label (never color-alone) inside a polite ARIA live region
+**And** `VramBreakdownBar` shows weights/KV/overhead vs. the budget marker with `role="img"` + a sentence aria-label and a screen-reader table, using the colorblind-safe validated palette
+**And** the overhead segment expands into its three sub-terms ("show your work")
+**And** motion respects `prefers-reduced-motion` and the layout is usable at 200% zoom.
+
+---
+
+## Epic 2: Act on the Answer — Remediation & Runnable Command
+
+Turn the verdict into action: generate the runnable command, suggest fixes on a no-go, surface honest caveats, and make every scenario shareable.
+
+### Story 2.1: Generate and copy the vllm serve command
+
+As a user,
+I want a runnable `vllm serve` command matching my configuration,
+So that I can launch exactly what I sized without hand-writing flags.
+
+**Acceptance Criteria:**
+
+**Given** a valid configuration
+**When** the command is generated
+**Then** the engine produces a `vllm serve` command with flags matching the config (model, --tensor-parallel-size, --quantization, --kv-cache-dtype, --max-model-len, --gpu-memory-utilization)
+**And** `CommandBlock` renders it in monospace with tinted flags and a copy button
+**And** copying shows a "Copied ✓" toast and announces via ARIA live.
+
+### Story 2.2: Suggest and apply nearest fitting configurations
+
+As a user,
+I want actionable fixes when a config doesn't fit,
+So that I reach a working setup without a failed launch.
+
+**Acceptance Criteria:**
+
+**Given** a no-go result
+**When** remediation runs
+**Then** the engine returns one or more nearest fitting configurations (e.g. reduced context, FP8 KV, higher TP/more GPUs), each carrying the exact input delta
+**And** `RemediationChips` renders them under the verdict
+**And** clicking a chip applies its delta to the inputs and recomputes through the standard live-recompute path.
+
+### Story 2.3: Expose advanced overhead levers
+
+As an expert user,
+I want to adjust `max_num_batched_tokens` and `enforce_eager`,
+So that I can model non-default vLLM overhead behavior.
+
+**Acceptance Criteria:**
+
+**Given** the collapsed Advanced group
+**When** I change an advanced lever
+**Then** the value flows into the overhead computation and the result updates live
+**And** `enforce_eager` set true zeroes the CUDA-graph overhead term
+**And** the generated command reflects any lever that maps to a vLLM flag.
+
+### Story 2.4: Surface honest over-provision and unsupported flags
+
+As a user,
+I want the tool to tell me when an estimate is conservative or unsupported,
+So that I'm never misled by a confident-but-wrong number.
+
+**Acceptance Criteria:**
+
+**Given** a model flagged as MLA or sliding-window (known over-provision)
+**When** the result renders
+**Then** a calm amber callout explains the estimate is conservative/over-provisioned
+**Given** an unsupported architecture
+**Then** the result is clearly flagged rather than returning an unflagged number
+**And** flags are carried in the result object (not thrown as errors).
+
+### Story 2.5: Encode scenarios in the URL
+
+As a user,
+I want my configuration reflected in the URL,
+So that I can share or restore an exact scenario with a link.
+
+**Acceptance Criteria:**
+
+**Given** any set of inputs
+**When** inputs change
+**Then** the query string updates (debounced) to encode the full configuration
+**And** loading a URL with encoded inputs restores that exact scenario and computes it
+**And** browser back/forward and refresh preserve the scenario.
+
+---
+
+## Epic 3: Reach It Anywhere — CLI & Self-Hosted Backend
+
+Make the same engine reachable from the terminal and runnable on the user's own hardware.
+
+### Story 3.1: Provide the companion CLI
+
+As a platform engineer,
+I want a CLI that checks a configuration and gates CI,
+So that a deployment fails before a GPU is ever touched if it won't fit.
+
+**Acceptance Criteria:**
+
+**Given** the CLI installed and a backend URL (default local)
+**When** I run `vllm-calc check --model … --gpu …:N --tp N --ctx … --max-seqs …`
+**Then** it prints a human-readable verdict and exits 0 on fit, non-zero on no-go
+**And** `--json` emits the full machine-readable result object
+**And** the CLI produces identical results to the SPA for identical inputs (parity).
+
+### Story 3.2: Package the backend as a local Docker image
+
+As an operator,
+I want to run the backend locally in Docker,
+So that no configuration data leaves my network (air-gapped/self-hosted).
+
+**Acceptance Criteria:**
+
+**Given** the Docker image
+**When** I run it with no internet access
+**Then** the API serves calculations with no external runtime calls, optionally serving the static SPA from the same container
+**And** configuration is via env vars (API base URL, vLLM version pin, CORS origins, rate-limit toggle)
+**And** the SPA and CLI can be pointed at the local instance.
+
+---
+
+## Epic 4: Prove It & Grow It — Accuracy Validation & Preset Contribution
+
+Build the trust engine (validation against real vLLM) and the community growth path (safe preset contribution).
+
+### Story 4.1: Validate preset files in CI with provenance
+
+As a maintainer,
+I want preset files validated automatically,
+So that a wrong or malformed preset can never reach users.
+
+**Acceptance Criteria:**
+
+**Given** a preset file in a PR
+**When** CI runs
+**Then** the file is validated against the generated JSON Schema (from the engine's Pydantic models) and the build fails on any violation
+**And** each preset must carry provenance fields (source, last_verified, vllm_version_checked)
+**And** a suspiciously low param count for a known-MoE model raises a warning.
+
+### Story 4.2: Provide a preset contribution path
+
+As a community contributor,
+I want a documented way to add a model/GPU preset,
+So that coverage grows without core-team code changes.
+
+**Acceptance Criteria:**
+
+**Given** the contribution docs
+**When** a contributor adds a preset
+**Then** `CONTRIBUTING.md` explains the schema, provenance, and (where possible) cross-checking against the model's published `config.json`
+**And** adding a preset requires no engine/API code change (data-only)
+**And** the new preset appears in the API/SPA after merge + restart.
+
+### Story 4.3: Build the accuracy validation harness
+
+As a maintainer,
+I want a harness that compares predictions to real vLLM reserve,
+So that accuracy is provable rather than asserted.
+
+**Acceptance Criteria:**
+
+**Given** a matrix of GPU × model × quant × TP cases and a pinned vLLM version
+**When** the harness runs on GPU hardware
+**Then** it launches real `vllm serve`, captures actually-reserved VRAM, and compares it to the engine's prediction
+**And** it reports per-case error and flags any under-prediction on a "fits" case as a failure
+**And** its results feed calibration of the overhead constants.
+
+### Story 4.4: Gate and publish the validation pass rate
+
+As a user evaluating the tool,
+I want the accuracy pass rate published and CI-gated,
+So that I can trust the numbers at the point of use.
+
+**Acceptance Criteria:**
+
+**Given** the harness
+**When** it runs on the self-hosted GPU CI runner (scheduled and on vLLM-version bumps)
+**Then** it computes the pass rate (target ≥90% within ±10%, zero under-predictions on "fits")
+**And** the pass rate and calibrated vLLM version range are published where users can see them
+**And** a failing pass rate is surfaced to maintainers rather than silently ignored.
