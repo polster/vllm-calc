@@ -207,6 +207,16 @@ So that the largest fixed component of VRAM is accurate.
 **And** for a MoE model, total (not active) parameters are used
 **And** a golden-value test covers FP16, FP8, and AWQ/GPTQ 4-bit cases.
 
+**Status:** Done (2026-07-09, red-green-refactor, verified green).
+
+**Dev Agent Record (Story 1.2):**
+- Added `packages/engine/src/vllm_calc_engine/quantization.py` (`WeightQuant` StrEnum: FP32/FP16/BF16/FP8/INT8/AWQ_4BIT/GPTQ_4BIT + `weight_bytes_per_param`) and `weights.py` (`weights_bytes(total_params, quant) -> int`, rejects negative params, returns integer bytes per the units invariant).
+- MoE handled by contract: `weights_bytes` takes TOTAL params; a golden test asserts total-vs-active divergence (Mixtral-8x7B-style 46.7B → 93.4 GB FP16). bytes-per-param: FP32=4, FP16/BF16=2, FP8/INT8=1, 4-bit=0.5.
+- **Golden tests** (`tests/test_weights.py`, 13 cases): per-scheme bpp, 70B golden byte values for FP16/FP8/4-bit, MoE total-not-active, negative-param guard.
+- Ruff nudge applied: use `enum.StrEnum` (not `str, Enum`) on py313.
+- **Verify green:** ruff ✓ · mypy (11 files) ✓ · pytest **18/18** ✓.
+- **File List:** `packages/engine/src/vllm_calc_engine/{quantization.py,weights.py}`, `packages/engine/tests/test_weights.py`.
+
 ### Story 1.3: Compute GQA-aware KV cache
 
 As a user,
