@@ -7,7 +7,12 @@ later. Extending the set (new formats) is additive — no core rewrite (NFR14).
 
 from enum import StrEnum
 
-__all__ = ["WeightQuant", "weight_bytes_per_param"]
+__all__ = [
+    "WeightQuant",
+    "weight_bytes_per_param",
+    "KVCacheDtype",
+    "kv_dtype_bytes",
+]
 
 
 class WeightQuant(StrEnum):
@@ -39,3 +44,23 @@ _BYTES_PER_PARAM: dict[WeightQuant, float] = {
 def weight_bytes_per_param(quant: WeightQuant) -> float:
     """Return the bytes stored per parameter for a weight quantization scheme."""
     return _BYTES_PER_PARAM[quant]
+
+
+class KVCacheDtype(StrEnum):
+    """The dtype the KV cache is stored in (independent of weight quantization)."""
+
+    FP16 = "fp16"
+    BF16 = "bf16"
+    FP8 = "fp8"
+
+
+_KV_DTYPE_BYTES: dict[KVCacheDtype, int] = {
+    KVCacheDtype.FP16: 2,
+    KVCacheDtype.BF16: 2,
+    KVCacheDtype.FP8: 1,
+}
+
+
+def kv_dtype_bytes(dtype: KVCacheDtype) -> int:
+    """Return the bytes-per-element the KV cache uses for a given dtype."""
+    return _KV_DTYPE_BYTES[dtype]

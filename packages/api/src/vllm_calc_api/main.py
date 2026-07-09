@@ -4,10 +4,7 @@ from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel
 
 import vllm_calc_engine
-
-# The vLLM version range this engine's estimates are calibrated for. Surfaced so
-# results are honestly labeled (NFR16); refined by the validation harness (Epic 4).
-SUPPORTED_VLLM_RANGE = ">=0.13,<0.14"
+from vllm_calc_engine.constants import SUPPORTED_VLLM_RANGE
 
 v1 = APIRouter(prefix="/v1")
 

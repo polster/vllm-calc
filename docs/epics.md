@@ -231,6 +231,15 @@ So that modern GQA models are modeled correctly rather than over-counted.
 **And** MHA (kv_heads = attention_heads) and MQA (kv_heads = 1) are covered by the same formula
 **And** golden-value tests verify a known GQA model (e.g. Llama-3-70B: 8 KV heads).
 
+**Status:** Done (2026-07-09, red-green-refactor, verified green).
+
+**Dev Agent Record (Story 1.3):**
+- Added `KVCacheDtype` (FP16/BF16/FP8) + `kv_dtype_bytes` (2/2/1) to `quantization.py`, and `kv_cache.py` with `kv_bytes_per_token(layers, kv_heads, head_dim, kv_dtype)` = `2 × kv_heads × head_dim × kv_dtype_bytes × layers` and `kv_cache_bytes(..., ctx_len, max_seqs)` = per_token × ctx_len × max_seqs. Integer bytes; positive-input guards.
+- GQA via actual `kv_heads`; MHA (=attention_heads) and MQA (=1) share the identical formula (parametrized test). Docstring notes the generic form conservatively over-estimates MLA/sliding-window (deferred fast-follow).
+- **Golden tests** (`tests/test_kv_cache.py`, 9 cases): Llama-3-70B per-token = 327,680 B; total @4096/1seq = 1,342,177,280 B; FP8 halves FP16; ctx×seqs scaling; MHA/GQA/MQA; non-positive guards.
+- **Verify green:** ruff ✓ · mypy (13 files) ✓ · pytest **27/27** ✓.
+- **File List:** `packages/engine/src/vllm_calc_engine/kv_cache.py`, `quantization.py` (KV dtype added), `packages/engine/tests/test_kv_cache.py`.
+
 ### Story 1.4: Compute the three-term overhead
 
 As a user,
@@ -244,6 +253,16 @@ So that the estimate reflects what vLLM actually reserves instead of a flat perc
 **Then** it returns the sum of a fixed per-GPU context term (+NCCL when TP>1), an activation term bounded by the chunked-prefill token budget, and a CUDA-graph term (zero when enforce_eager)
 **And** the three sub-terms are individually returned in the result for the "show your work" UI
 **And** overhead constants are defined in one place, documented as calibration targets for the validation harness (Epic 4).
+
+**Status:** Done (2026-07-09, red-green-refactor, verified green).
+
+**Dev Agent Record (Story 1.4):**
+- Added `constants.py` (single place; PROVISIONAL calibration targets clearly flagged for Epic 4: `FIXED_CONTEXT_BYTES_PER_GPU`=1 GiB, `NCCL_BYTES_PER_GPU`=0.5 GiB, `ACTIVATION_MULTIPLIER`=8, `CUDA_GRAPH_BYTES_PER_GPU`=1 GiB) and `overhead.py` with `OverheadBreakdown` dataclass + `overhead_bytes(gpu_count, hidden_size, max_num_batched_tokens, dtype_bytes, enforce_eager)`.
+- Three itemized sub-terms for "show your work": `fixed_context` (+NCCL when gpu_count>1), `activations` (= tokens × hidden × dtype × k), `cuda_graphs` (0 under enforce_eager). Integer bytes; positive-input guards.
+- Constants explicitly documented as calibration targets, biased to over-predict (conservative invariant).
+- **Tests** (`tests/test_overhead.py`, 8): activation formula, single-GPU no-NCCL + total=sum, multi-GPU adds NCCL, enforce_eager zeroes graphs, activation scaling, breakdown shape, constants-in-one-place, guards.
+- **Verify green:** ruff ✓ · mypy (16 files) ✓ · pytest **35/35** ✓.
+- **File List:** `packages/engine/src/vllm_calc_engine/{constants.py,overhead.py}`, `packages/engine/tests/test_overhead.py`.
 
 ### Story 1.5: Apply per-GPU tensor-parallel sharding and validate parallelism
 
@@ -261,6 +280,15 @@ So that multi-GPU configurations report true per-GPU memory and reject impossibl
 **Given** TP does not divide the heads or does not equal GPU count
 **Then** the engine raises a typed constraint error with a plain-language reason.
 
+**Status:** Done (2026-07-09, red-green-refactor, verified green).
+
+**Dev Agent Record (Story 1.5):**
+- Added `exceptions.py` (`EngineError` base, `InvalidParallelism`, `UnsupportedArchitecture`) and `parallelism.py` (`ParallelismPlan` frozen dataclass, `plan_tensor_parallel(...)`, `shard_bytes(total, divisor)`).
+- **Sharding:** `weights_divisor = TP`; `kv_divisor = min(TP, kv_heads)` (replication wall). **Validation mirrors vLLM:** TP==gpu_count; `attention_heads % TP == 0`; if TP≤kv_heads then `kv_heads % TP == 0` else `TP % kv_heads == 0` (even replication). Errors raise `InvalidParallelism` with plain-language reasons; the replication wall (TP>kv_heads, even) is a **warning** carried in the plan, not an error.
+- **Tests** (`tests/test_parallelism.py`, 10): valid GQA shard, TP=kv_heads, replication-wall warning + kv_divisor cap, TP≠gpu_count error, attention-indivisible error, KV-indivisible-below-wall error, uneven-replication-above-wall error, TP=1, shard_bytes, non-positive TP.
+- **Verify green:** ruff ✓ · mypy (19 files) ✓ · pytest **45/45** ✓.
+- **File List:** `packages/engine/src/vllm_calc_engine/{exceptions.py,parallelism.py}`, `packages/engine/tests/test_parallelism.py`.
+
 ### Story 1.6: Assemble the fit verdict and serving capacity
 
 As a user,
@@ -275,6 +303,16 @@ So that I get one clear answer to "will it fit and for how many requests?"
 **And** the verdict includes the capacity statement and a conservative/worst-case label on max_concurrent
 **And** the result reports the calibrated vLLM version range
 **And** a golden-value end-to-end test (a full scenario) locks the assembled numbers.
+
+**Status:** Done (2026-07-09, red-green-refactor, verified green).
+
+**Dev Agent Record (Story 1.6):**
+- Added **shared Pydantic models** `models.py` (`CalcInput`, `Breakdown`, `CalcResult` — the engine-owned contract API/CLI import) and `calculate.py` (`calculate(CalcInput) -> CalcResult`, the engine's single entry point).
+- Composes all four consumers per-GPU: weights/TP + KV/min(TP,kv_heads) + 3-term overhead; `available_for_kv = gpu_util×vram − weights − overhead`; `max_concurrent = min(max_num_seqs_cap, ⌊available_for_kv / kv_bytes_per_seq⌋)`; `fits ⟺ max_seqs ≤ max_concurrent`. Plain-language verdict (incl. weights+overhead-exceed-budget case), worst-case note, vLLM-range label, replication warnings propagated. Activations use compute dtype (2B) independent of weight quant. GiB→bytes only at the input edge.
+- Centralized `SUPPORTED_VLLM_RANGE` in `engine/constants.py`; API now imports it (single source).
+- **Golden end-to-end test** (`tests/test_calculate.py`, 6): Llama-70B AWQ on 2×A100 TP2 8k/32 → weights_pg=17.5 GB, overhead=2,952,790,016 B, available_for_kv=56,856,621,312 B, **max_concurrent=42, fits=True**; plus no-go at 128k, batch-cap bound, replication-wall propagation, invalid-TP raise, determinism.
+- **Verify green:** ruff ✓ · mypy (22 files) ✓ · pytest **51/51** ✓ (API meta endpoints still green).
+- **File List:** `packages/engine/src/vllm_calc_engine/{models.py,calculate.py,constants.py}`, `packages/api/src/vllm_calc_api/main.py`, `packages/engine/tests/test_calculate.py`.
 
 ### Story 1.7: Load curated presets from version-controlled YAML
 
