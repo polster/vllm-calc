@@ -5,6 +5,7 @@ export type WeightQuant = 'fp32' | 'fp16' | 'bf16' | 'fp8' | 'int8' | 'awq-4bit'
 export type KVDtype = 'fp16' | 'bf16' | 'fp8'
 
 export interface CalcInput {
+  model_ref?: string | null
   total_params: number
   layers: number
   attention_heads: number
@@ -45,6 +46,7 @@ export interface CalcResult {
   supported_vllm_range: string
   warnings: string[]
   breakdown: Breakdown
+  serve_command: string
 }
 
 export interface ModelPreset {

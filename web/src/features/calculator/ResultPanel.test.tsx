@@ -18,6 +18,8 @@ function makeResult(fits: boolean): CalcResult {
     worst_case_note: 'Conservative: assumes every sequence uses the full context.',
     supported_vllm_range: '>=0.13,<0.14',
     warnings: [],
+    serve_command:
+      'vllm serve meta-llama/Llama-3.3-70B-Instruct --tensor-parallel-size 2 --quantization awq --max-model-len 8192 --gpu-memory-utilization 0.9',
     breakdown: {
       weights_per_gpu_bytes: 17 * GIB,
       kv_per_gpu_bytes: 24 * GIB,

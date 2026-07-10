@@ -3,6 +3,7 @@ import type { CalcInput } from '../../api/types.ts'
 /** The pre-computed default scenario shown on load (no blank state):
  *  Llama-3.3-70B, AWQ 4-bit, on 2× A100 80GB with TP=2. */
 export const DEFAULT_INPUT: CalcInput = {
+  model_ref: 'meta-llama/Llama-3.3-70B-Instruct',
   total_params: 70_600_000_000,
   layers: 80,
   attention_heads: 64,

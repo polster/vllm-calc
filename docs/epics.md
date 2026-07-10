@@ -470,6 +470,16 @@ So that I can launch exactly what I sized without hand-writing flags.
 **And** `CommandBlock` renders it in monospace with tinted flags and a copy button
 **And** copying shows a "Copied ✓" toast and announces via ARIA live.
 
+**Status:** Done (2026-07-10, red-green-refactor, verified green).
+
+**Dev Agent Record (Story 2.1):**
+- **Engine-owned generation (NFR3):** new `command.py` `serve_command(CalcInput) -> str`, pure/deterministic, so SPA/API/CLI emit the identical command. Added optional `model_ref` to `CalcInput` (HF repo id / path) and `serve_command` to `CalcResult`; `calculate()` populates it. The SPA only *tokenizes* the string for display — it never builds it.
+- **Honest flags:** full-precision weights (fp32/fp16/bf16) and plain int8 emit **no** `--quantization` (vLLM has no single canonical arg / would reject); `awq-4bit→awq`, `gptq-4bit→gptq`, `fp8→fp8`. KV dtype fp16/bf16 is the "auto" default so `--kv-cache-dtype` is **omitted**; only fp8 emits it. `--gpu-memory-utilization` formatted trailing-zero-free (`:g`). Missing `model_ref` → `<your-model>` placeholder rather than a wrong repo id.
+- **CommandBlock (UX-DR5):** monospace `<pre>` with `--flag` tokens tinted in the accent color, internal horizontal scroll (UX-DR12), a Copy button using `navigator.clipboard`, a transient "Copied ✓" toast, and an `aria-live="polite"` sr-only announcement. Wired into `ResultPanel` below the breakdown. SPA derives `model_ref` from the selected preset's `source` HF URL (`hfIdFromSource`); "Custom…" clears it to the placeholder.
+- **Tests:** engine `test_command.py` (7 golden: awq no-auto-kv, model_ref use, full-precision omits quant, gptq map, fp8 kv flag, gmu formatting, result carries command); web `CommandBlock.test.tsx` (2: renders full command, copy → clipboard + toast + live announce). Fixtures updated for the new required field.
+- **Verify green:** ruff ✓ · mypy (33 files) ✓ · pytest **71/71** ✓ · web eslint ✓ · tsc ✓ · vitest **21/21** ✓ · vite build ✓. **Live API smoke:** default → real `vllm serve meta-llama/Llama-3.3-70B-Instruct …` (fits, 42); fp8/custom → `<your-model> … --kv-cache-dtype fp8`.
+- **File List:** `packages/engine/src/vllm_calc_engine/{command.py,models.py,calculate.py}`, `packages/engine/tests/test_command.py`; `web/src/api/types.ts`, `web/src/features/calculator/{CommandBlock.tsx,CommandBlock.test.tsx,ResultPanel.tsx,InputPanel.tsx,defaults.ts,useCalculator.test.ts,ResultPanel.test.tsx}`.
+
 ### Story 2.2: Suggest and apply nearest fitting configurations
 
 As a user,

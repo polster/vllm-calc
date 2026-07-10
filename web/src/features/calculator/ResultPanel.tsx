@@ -1,4 +1,5 @@
 import type { CalcResult } from '../../api/types.ts'
+import { CommandBlock } from './CommandBlock.tsx'
 import { VerdictBanner } from './VerdictBanner.tsx'
 import { VramBreakdownBar } from './VramBreakdownBar.tsx'
 import type { Status } from './useCalculator.ts'
@@ -32,6 +33,7 @@ export function ResultPanel({ result, status, error }: Props) {
         >
           <VerdictBanner result={result} />
           <VramBreakdownBar breakdown={result.breakdown} />
+          <CommandBlock command={result.serve_command} />
 
           {result.warnings.map((w) => (
             <p key={w} className="text-xs" style={{ color: 'var(--warn)' }}>

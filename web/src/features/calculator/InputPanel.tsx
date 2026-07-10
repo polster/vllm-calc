@@ -12,6 +12,14 @@ interface Props {
 const fieldCls =
   'w-full rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1.5 text-sm'
 
+/** Derive the `vllm serve` model reference (HF repo id) from a preset's source
+ *  URL, e.g. https://huggingface.co/meta-llama/Llama-3.3-70B → the repo id.
+ *  Non-HF sources yield null so the command shows its swap-me placeholder. */
+function hfIdFromSource(source: string): string | null {
+  const m = /huggingface\.co\/([^?#]+)/.exec(source)
+  return m ? m[1].replace(/\/$/, '') : null
+}
+
 function NumberField(props: {
   label: string
   value: number
@@ -49,9 +57,14 @@ export function InputPanel({ input, setInput, modelPresets, gpuPresets }: Props)
 
   function selectModel(id: string) {
     setModelId(id)
+    if (id === 'custom') {
+      setInput({ model_ref: null }) // custom model → command shows the placeholder
+      return
+    }
     const p = modelPresets.find((m) => m.id === id)
     if (p)
       setInput({
+        model_ref: hfIdFromSource(p.source),
         total_params: p.total_params,
         layers: p.layers,
         attention_heads: p.attention_heads,

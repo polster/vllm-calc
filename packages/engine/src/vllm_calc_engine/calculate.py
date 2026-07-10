@@ -12,6 +12,7 @@ edge. Deterministic and pure (NFR3).
 """
 
 from vllm_calc_engine import constants
+from vllm_calc_engine.command import serve_command
 from vllm_calc_engine.kv_cache import kv_bytes_per_token
 from vllm_calc_engine.models import Breakdown, CalcInput, CalcResult
 from vllm_calc_engine.overhead import overhead_bytes
@@ -93,6 +94,7 @@ def calculate(inp: CalcInput) -> CalcResult:
         ),
         supported_vllm_range=constants.SUPPORTED_VLLM_RANGE,
         warnings=list(plan.warnings),
+        serve_command=serve_command(inp),
         breakdown=Breakdown(
             weights_per_gpu_bytes=weights_pg,
             kv_per_gpu_bytes=kv_pg_requested,

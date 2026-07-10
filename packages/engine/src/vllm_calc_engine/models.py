@@ -45,6 +45,10 @@ class GpuPreset(_Provenance):
 class CalcInput(BaseModel):
     """A full sizing request: model architecture + GPU + workload + advanced levers."""
 
+    # Model reference (HF repo id or local path) for the generated serve command;
+    # optional because a custom model may have no canonical id.
+    model_ref: str | None = Field(default=None, description="HF repo id / path for `vllm serve`.")
+
     # Model architecture
     total_params: int = Field(gt=0, description="Total params (MoE: all experts).")
     layers: int = Field(gt=0)
@@ -98,3 +102,4 @@ class CalcResult(BaseModel):
     supported_vllm_range: str
     warnings: list[str]
     breakdown: Breakdown
+    serve_command: str  # runnable `vllm serve …` matching this configuration
