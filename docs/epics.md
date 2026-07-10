@@ -690,6 +690,14 @@ So that coverage grows without core-team code changes.
 **And** adding a preset requires no engine/API code change (data-only)
 **And** the new preset appears in the API/SPA after merge + restart.
 
+**Status:** Done (2026-07-10, docs — the data-only mechanism already exists and is test-covered).
+
+**Dev Agent Record (Story 4.2):**
+- **`CONTRIBUTING.md` → "Adding a model or GPU preset":** annotated model + GPU YAML templates (every field explained, incl. `attention_type` and the MoE TOTAL-not-active rule), a **`config.json` cross-check table** (preset field → HF config key, incl. GQA `num_key_value_heads` and the `head_dim` fallback), the "set `attention_type: other` when unsure so it's honestly flagged" guidance, and the local validation command (identical to CI).
+- **`presets/README.md`** updated to point at the contribution section and state the data-only guarantee (no code change; appears after merge + backend restart).
+- **Data-only is real, not aspirational:** the backend loads/validates the preset directory at startup (Story 1.7/1.8), so a merged YAML file surfaces in API, SPA, and CLI with no code change — already exercised by the loader tests. No new code for this story.
+- **File List:** `CONTRIBUTING.md`, `presets/README.md`.
+
 ### Story 4.3: Build the accuracy validation harness
 
 As a maintainer,
