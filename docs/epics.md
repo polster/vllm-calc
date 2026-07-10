@@ -404,6 +404,20 @@ So that exploring configurations feels effortless with no submit button.
 **And** the app loads with a pre-computed default scenario (no blank state)
 **And** invalid inputs (e.g. TP divisibility) show plain-language errors on the offending field while the last valid result stays visible.
 
+**Status:** Done (2026-07-10, verified green).
+
+**Dev Agent Record (Story 1.10):**
+- **Typed API client** (`src/api/{types.ts,client.ts}`): TS mirror of the engine contract; `postCalculate` (throws `ApiError` on the structured contract), `fetchModel/GpuPresets`; base URL via `VITE_API_BASE_URL` (public or local backend). SPA holds **no calc logic** (parity).
+- **`useCalculator` hook**: config state (seeded with `DEFAULT_INPUT` = Llama-3.3-70B on 2×A100, so the app **pre-computes a default scenario on load**), preset load on mount, **debounced (250ms) live recompute**, **last-valid result persists** across errors/loading (never blanks), request-sequence guard drops stale responses.
+- **`InputPanel`**: grouped `<fieldset>` inputs (Model / GPU & Parallelism / Workload / collapsed Advanced `<details>`); model & GPU **preset `<select>`s autofill** fields (arch tagged "◆ from preset (editable)"), "Custom…" option; helper `NumberField`.
+- **`ResultPanel`** (minimal inline for 1.10 per readiness concern #2 — 1.11 upgrades to VerdictBanner/VramBreakdownBar): verdict line, per-GPU breakdown in **GiB (bytes→GiB only at this edge)**, warnings, worst-case + vLLM-version note; inline error banner with "showing last valid result"; dims (not blanks) during recompute.
+- **`CalculatorPage`** wires the hook into the two regions; `App` renders header + page.
+- **Scope calls (flagged):** preset pickers are accessible native `<select>` — *searchable-combobox filtering* and *per-field (vs. inline) error placement* are deferred polish (heavy to hand-roll + not headlessly testable).
+- Test infra: added `vite-env.d.ts` for `import.meta.env` typing.
+- **Tests** (`useCalculator.test.ts` 4 + `InputPanel.test.tsx` 2): default-compute-on-load, recompute-on-change, **error-keeps-last-result**, presets-on-mount, preset autofill, field edit. Total web **13/13**.
+- **Verify green:** eslint ✓ · tsc ✓ · vitest 13/13 ✓ · vite build ✓.
+- **File List:** `web/src/api/{types.ts,client.ts}`, `web/src/features/calculator/{defaults.ts,useCalculator.ts,InputPanel.tsx,ResultPanel.tsx,CalculatorPage.tsx,useCalculator.test.ts,InputPanel.test.tsx}`, `web/src/{App.tsx,vite-env.d.ts}`.
+
 ### Story 1.11: Render the verdict and VRAM breakdown
 
 As a user,

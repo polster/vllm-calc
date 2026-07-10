@@ -1,8 +1,8 @@
-// App shell (Story 1.9): the responsive two-region layout — inputs and the
-// living result. Inputs (Story 1.10) and the verdict/breakdown (Story 1.11)
-// fill these regions next.
+// App shell (Story 1.9) + calculator (Story 1.10): header with theme toggle,
+// then the two-region calculator page.
 
 import { ThemeToggle } from './components/ThemeToggle.tsx'
+import { CalculatorPage } from './features/calculator/CalculatorPage.tsx'
 
 export default function App() {
   return (
@@ -13,26 +13,7 @@ export default function App() {
         </h1>
         <ThemeToggle />
       </header>
-
-      <main className="grid flex-1 gap-6 p-6 lg:grid-cols-[minmax(320px,420px)_1fr]">
-        <section
-          aria-label="Configuration"
-          data-testid="inputs-region"
-          className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5"
-        >
-          <p className="text-sm text-[var(--muted)]">Inputs — coming in Story 1.10.</p>
-        </section>
-
-        <section
-          aria-label="Result"
-          data-testid="result-region"
-          className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5"
-        >
-          <p className="text-sm text-[var(--muted)]">
-            Verdict &amp; VRAM breakdown — coming in Story 1.11.
-          </p>
-        </section>
-      </main>
+      <CalculatorPage />
     </div>
   )
 }
