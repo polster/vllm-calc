@@ -10,6 +10,7 @@ export const DEFAULT_INPUT: CalcInput = {
   kv_heads: 8,
   head_dim: 128,
   hidden_size: 8192,
+  attention_type: 'standard',
   weight_quant: 'awq-4bit',
   kv_dtype: 'fp16',
   ctx_len: 8192,

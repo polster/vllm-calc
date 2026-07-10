@@ -3,6 +3,7 @@
 
 export type WeightQuant = 'fp32' | 'fp16' | 'bf16' | 'fp8' | 'int8' | 'awq-4bit' | 'gptq-4bit'
 export type KVDtype = 'fp16' | 'bf16' | 'fp8'
+export type AttentionType = 'standard' | 'mla' | 'sliding_window' | 'other'
 
 export interface CalcInput {
   model_ref?: string | null
@@ -12,6 +13,7 @@ export interface CalcInput {
   kv_heads: number
   head_dim: number
   hidden_size: number
+  attention_type: AttentionType
   weight_quant: WeightQuant
   kv_dtype: KVDtype
   ctx_len: number
@@ -43,6 +45,11 @@ export interface Remediation {
   delta: Partial<CalcInput>
 }
 
+export interface Flag {
+  type: string
+  message: string
+}
+
 export interface CalcResult {
   fits: boolean
   requested_max_seqs: number
@@ -54,6 +61,7 @@ export interface CalcResult {
   breakdown: Breakdown
   serve_command: string
   remediations: Remediation[]
+  flags: Flag[]
 }
 
 export interface ModelPreset {
@@ -66,6 +74,7 @@ export interface ModelPreset {
   head_dim: number
   hidden_size: number
   is_moe: boolean
+  attention_type: AttentionType
   source: string
   last_verified: string
 }

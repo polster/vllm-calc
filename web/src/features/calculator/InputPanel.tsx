@@ -71,6 +71,7 @@ export function InputPanel({ input, setInput, modelPresets, gpuPresets }: Props)
         kv_heads: p.kv_heads,
         head_dim: p.head_dim,
         hidden_size: p.hidden_size,
+        attention_type: p.attention_type,
       })
   }
 

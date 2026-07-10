@@ -545,6 +545,17 @@ So that I'm never misled by a confident-but-wrong number.
 **Then** the result is clearly flagged rather than returning an unflagged number
 **And** flags are carried in the result object (not thrown as errors).
 
+**Status:** Done (2026-07-10, red-green-refactor, verified green).
+
+**Dev Agent Record (Story 2.4):**
+- **New contract concept:** `AttentionType` enum (`standard`/`mla`/`sliding_window`/`other`) on `CalcInput` + `ModelPreset` (default `standard`, so all 8 existing presets validate unchanged and still load). A structured `Flag {type, message}` model + `flags: list[Flag]` on `CalcResult`.
+- **Honesty over correctness-theater (NFR4/FR21):** `flags.py build_flags(inp)` → `mla`/`sliding_window` emit `over_provision_estimate` (generic KV formula is a conservative upper bound); `other` emits `unsupported` (uncalibrated, verify before relying). Flags are **carried in the result, never thrown** — the calculation always runs and returns a full labeled verdict. `calculate()` populates `flags` on every call (a flag can apply to a fit, too).
+- **Why flags not branched math:** exact MLA/SWA KV math was deliberately deferred (brainstorm decision "keep a more generic calculation"); this is the honesty mechanism that makes that deferral safe rather than silently wrong.
+- **`HonestyCallout`** — calm amber (reserved `--warn` token), icon + text (not color-alone), `role="note"`; renders "Conservative estimate" for over-provision and "Not calibrated" for unsupported. Placed under the verdict. Presets carry `attention_type` through autofill; no MLA/SWA presets ship in v1 yet (they arrive with the Epic 4 contribution path), so there's no new input selector — the mechanism is ready for them.
+- **Tests:** engine `test_flags.py` (5: standard→none, MLA/SWA→over_provision, other→unsupported, carried-not-thrown); web `HonestyCallout.test.tsx` (3: empty, conservative label, not-calibrated label). Fixtures + QWEN test preset updated for the new field.
+- **Verify green:** ruff ✓ · mypy (38 files) ✓ · pytest **86/86** ✓ · web eslint/tsc ✓ · vitest **28/28** ✓ · vite build ✓. **Live API smoke:** standard→200/no flags, mla & sliding_window→200/`over_provision_estimate`, other→200/`unsupported`; 8 presets still load.
+- **File List:** `packages/engine/src/vllm_calc_engine/{attention.py,flags.py,models.py,calculate.py}`, `packages/engine/tests/test_flags.py`; `web/src/api/types.ts`, `web/src/features/calculator/{HonestyCallout.tsx,HonestyCallout.test.tsx,ResultPanel.tsx,InputPanel.tsx,defaults.ts,useCalculator.test.ts,ResultPanel.test.tsx,InputPanel.test.tsx}`.
+
 ### Story 2.5: Encode scenarios in the URL
 
 As a user,

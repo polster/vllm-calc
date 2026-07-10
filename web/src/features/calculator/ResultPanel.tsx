@@ -1,5 +1,6 @@
 import type { CalcInput, CalcResult } from '../../api/types.ts'
 import { CommandBlock } from './CommandBlock.tsx'
+import { HonestyCallout } from './HonestyCallout.tsx'
 import { RemediationChips } from './RemediationChips.tsx'
 import { VerdictBanner } from './VerdictBanner.tsx'
 import { VramBreakdownBar } from './VramBreakdownBar.tsx'
@@ -34,6 +35,7 @@ export function ResultPanel({ result, status, error, onApply }: Props) {
           }
         >
           <VerdictBanner result={result} />
+          <HonestyCallout flags={result.flags} />
           {onApply && (
             <RemediationChips remediations={result.remediations} onApply={onApply} />
           )}

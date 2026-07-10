@@ -13,6 +13,7 @@ edge. Deterministic and pure (NFR3).
 
 from vllm_calc_engine import constants
 from vllm_calc_engine.command import serve_command
+from vllm_calc_engine.flags import build_flags
 from vllm_calc_engine.kv_cache import kv_bytes_per_token
 from vllm_calc_engine.models import Breakdown, CalcInput, CalcResult
 from vllm_calc_engine.overhead import overhead_bytes
@@ -34,6 +35,7 @@ def calculate(inp: CalcInput) -> CalcResult:
     Raises InvalidParallelism on a bad TP config.
     """
     result = _compute(inp)
+    result.flags = build_flags(inp)
     if not result.fits:
         result.remediations = build_remediations(inp, result, _compute)
     return result

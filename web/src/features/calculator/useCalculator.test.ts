@@ -16,6 +16,7 @@ function makeResult(overrides: Partial<CalcResult> = {}): CalcResult {
     warnings: [],
     serve_command: 'vllm serve <your-model> --tensor-parallel-size 2',
     remediations: [],
+    flags: [],
     breakdown: {
       weights_per_gpu_bytes: 1,
       kv_per_gpu_bytes: 1,

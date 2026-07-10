@@ -8,9 +8,18 @@ accepted as human-facing GiB on input (a single documented input-edge conversion
 
 from pydantic import BaseModel, Field
 
+from vllm_calc_engine.attention import AttentionType
 from vllm_calc_engine.quantization import KVCacheDtype, WeightQuant
 
-__all__ = ["CalcInput", "Breakdown", "CalcResult", "Remediation", "ModelPreset", "GpuPreset"]
+__all__ = [
+    "CalcInput",
+    "Breakdown",
+    "CalcResult",
+    "Remediation",
+    "Flag",
+    "ModelPreset",
+    "GpuPreset",
+]
 
 
 class _Provenance(BaseModel):
@@ -32,6 +41,7 @@ class ModelPreset(_Provenance):
     head_dim: int = Field(gt=0)
     hidden_size: int = Field(gt=0)
     is_moe: bool = False
+    attention_type: AttentionType = AttentionType.STANDARD
 
 
 class GpuPreset(_Provenance):
@@ -56,6 +66,7 @@ class CalcInput(BaseModel):
     kv_heads: int = Field(gt=0)
     head_dim: int = Field(gt=0)
     hidden_size: int = Field(gt=0)
+    attention_type: AttentionType = AttentionType.STANDARD
 
     # Precision
     weight_quant: WeightQuant
@@ -100,6 +111,13 @@ class Remediation(BaseModel):
     delta: dict[str, int | str]
 
 
+class Flag(BaseModel):
+    """A non-fatal honesty label carried in the result (never thrown)."""
+
+    type: str  # over_provision_estimate | unsupported
+    message: str
+
+
 class CalcResult(BaseModel):
     """The headline answer: verdict, capacity, breakdown, honesty labels."""
 
@@ -113,3 +131,4 @@ class CalcResult(BaseModel):
     breakdown: Breakdown
     serve_command: str  # runnable `vllm serve …` matching this configuration
     remediations: list[Remediation] = Field(default_factory=list)  # populated only on a no-go
+    flags: list[Flag] = Field(default_factory=list)  # honesty labels (MLA/SWA/unsupported)

@@ -15,6 +15,7 @@ const QWEN: ModelPreset = {
   head_dim: 128,
   hidden_size: 3584,
   is_moe: false,
+  attention_type: 'standard',
   source: 'hf',
   last_verified: '2026-07-10',
 }
