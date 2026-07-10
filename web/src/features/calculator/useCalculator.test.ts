@@ -1,9 +1,12 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { CalcResult } from '../../api/types.ts'
 import type { CalculatorDeps } from './useCalculator.ts'
 import { useCalculator } from './useCalculator.ts'
+
+// The URL is app-global state; reset it between tests so scenarios don't leak.
+beforeEach(() => window.history.replaceState(null, '', '/'))
 
 function makeResult(overrides: Partial<CalcResult> = {}): CalcResult {
   return {
@@ -82,5 +85,22 @@ describe('useCalculator', () => {
     })
     const { result } = renderHook(() => useCalculator(deps))
     await waitFor(() => expect(result.current.modelPresets).toHaveLength(1))
+  })
+
+  it('seeds the scenario from the URL on mount', async () => {
+    window.history.replaceState(null, '', '/?ctx_len=1234')
+    const deps = makeDeps()
+    renderHook(() => useCalculator(deps))
+    await waitFor(() => expect(deps.calculate).toHaveBeenCalledTimes(1))
+    expect((deps.calculate as ReturnType<typeof vi.fn>).mock.calls[0][0].ctx_len).toBe(1234)
+  })
+
+  it('reflects input changes in the URL (shareable)', async () => {
+    const deps = makeDeps()
+    const { result } = renderHook(() => useCalculator(deps))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+
+    act(() => result.current.setInput({ ctx_len: 4096 }))
+    await waitFor(() => expect(window.location.search).toContain('ctx_len=4096'))
   })
 })

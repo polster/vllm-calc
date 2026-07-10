@@ -570,6 +570,21 @@ So that I can share or restore an exact scenario with a link.
 **And** loading a URL with encoded inputs restores that exact scenario and computes it
 **And** browser back/forward and refresh preserve the scenario.
 
+**Status:** Done (2026-07-10, red-green-refactor, verified green). **← completes Epic 2.**
+
+**Dev Agent Record (Story 2.5):**
+- **Pure SPA story (no engine/API change).** New `urlState.ts` codec: `encodeInput` → query string; `decodeInput` → full `CalcInput`. The param shape is **derived from `DEFAULT_INPUT`** (keys + `typeof` per field), so it stays in sync automatically; unknown/malformed params fall back to the default rather than producing a broken input (`ctx_len=notanumber` → default). `model_ref=''` round-trips as `null` (custom model); booleans as `1`/`0`.
+- **`useCalculator` wiring:** seeds initial state from `window.location.search` on mount (empty query → default scenario), keeps the URL in sync **inside the existing debounced recompute** via `history.replaceState` (copy-shareable, without flooding history per keystroke), and restores on browser back/forward via a `popstate` listener.
+- **Test isolation:** added a `beforeEach` resetting the URL to `/` so app-global URL state doesn't leak between hook tests.
+- **Tests:** `urlState.test.ts` (5: round-trip, empty→default, malformed-number fallback, empty model_ref→null, boolean 1/0); `useCalculator.test.ts` +2 (seeds scenario from `?ctx_len=1234` on mount; input change reflected in `location.search`).
+- **Verify green:** eslint ✓ · tsc ✓ · vitest **35/35** ✓ · vite build ✓. (Engine/API unchanged: pytest **86/86**.)
+- **File List:** `web/src/features/calculator/{urlState.ts,urlState.test.ts,useCalculator.ts,useCalculator.test.ts}`.
+
+---
+
+## Epic 2 — COMPLETE (2026-07-10)
+All 5 stories done and green. The tool now goes from *answering* to *acting*: an engine-owned runnable `vllm serve` command (2.1), honest nearest-fitting remediation chips that only ever suggest fixes that actually fit (2.2), advanced overhead levers reflected in the command (2.3), calm honesty flags for MLA/SWA/uncalibrated architectures carried in the result rather than thrown (2.4), and full URL-as-state so any scenario is shareable and restorable (2.5). **114 automated tests** (86 Python + 28 web) plus live API smokes for command, remediation, and flags. Next: Epic 3 (CLI + self-hosted Docker backend).
+
 ---
 
 ## Epic 3: Reach It Anywhere — CLI & Self-Hosted Backend

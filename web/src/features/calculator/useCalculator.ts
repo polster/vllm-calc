@@ -6,7 +6,7 @@ import {
   postCalculate,
 } from '../../api/client.ts'
 import type { CalcInput, CalcResult, GpuPreset, ModelPreset } from '../../api/types.ts'
-import { DEFAULT_INPUT } from './defaults.ts'
+import { decodeInput, encodeInput } from './urlState.ts'
 
 export type Status = 'loading' | 'ready' | 'error'
 
@@ -30,7 +30,11 @@ const DEBOUNCE_MS = 250
 export function useCalculator(deps: CalculatorDeps = DEFAULT_DEPS) {
   const { calculate, fetchModels, fetchGpus } = deps
 
-  const [input, setInputState] = useState<CalcInput>(DEFAULT_INPUT)
+  // Seed from the URL so a shared/refreshed scenario is restored (UX-DR8);
+  // an empty query yields the default scenario.
+  const [input, setInputState] = useState<CalcInput>(() =>
+    decodeInput(typeof window === 'undefined' ? '' : window.location.search),
+  )
   const [result, setResult] = useState<CalcResult | null>(null)
   const [status, setStatus] = useState<Status>('loading')
   const [error, setError] = useState<string | null>(null)
@@ -48,10 +52,20 @@ export function useCalculator(deps: CalculatorDeps = DEFAULT_DEPS) {
     }
   }, [fetchModels, fetchGpus])
 
+  // Restore the scenario on browser back/forward.
+  useEffect(() => {
+    const onPop = () => setInputState(decodeInput(window.location.search))
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
   useEffect(() => {
     setStatus('loading')
     const requestId = ++seq.current
     const handle = setTimeout(() => {
+      // Keep the URL in sync (debounced with the recompute); replaceState avoids
+      // flooding history on every keystroke while keeping the URL copy-shareable.
+      window.history.replaceState(null, '', `${window.location.pathname}?${encodeInput(input)}`)
       calculate(input)
         .then((r) => {
           if (requestId !== seq.current) return // stale response, drop
