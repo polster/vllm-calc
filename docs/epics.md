@@ -377,6 +377,18 @@ So that the calculator is pleasant and legible in light and dark.
 **And** a persisted theme toggle switches themes and both pass WCAG AA contrast
 **And** the responsive two-region layout shell (inputs / result at ≥lg, stacked below) renders without horizontal page scroll.
 
+**Status:** Done (2026-07-10, verified green).
+
+**Dev Agent Record (Story 1.9):**
+- Added **Tailwind v4** (`tailwindcss` + `@tailwindcss/vite`) wired into `vite.config.ts`. `index.css` defines the **token layer** as CSS variables: slate neutrals + single indigo accent + reserved semantic `--fit/--no-fit/--warn`. **Light is default; dark applies via `@media (prefers-color-scheme: dark)` AND explicit `:root[data-theme]` (toggle wins both directions).** Token pairs chosen for WCAG AA on their surfaces.
+- `theme.ts` (persisted light/dark: localStorage + `data-theme` on `<html>`, system-aware `effectiveTheme`, `initTheme`/`toggleTheme`) + `ThemeToggle` component + `initTheme()` on boot in `main.tsx`.
+- `App.tsx`: responsive **two-region shell** — `lg:grid-cols-[minmax(320px,420px)_1fr]` (inputs left / result right at ≥lg, stacks below); header with product name + theme toggle. Regions are placeholders for Stories 1.10/1.11.
+- Test infra: installed an in-memory `localStorage` in `test-setup.ts` (Node 25's experimental global shadows jsdom's and lacks getItem/setItem).
+- **Tests** (`App.test.tsx` 3, `theme.test.ts` 4): shell renders both regions + heading + toggle; theme applies/persists/toggles/inits.
+- **Design-verified (not unit-testable in jsdom, which has no layout engine):** no-horizontal-scroll and pixel contrast — automated axe/contrast checks land with the a11y story (UX-DR13 / Story 1.11).
+- **Verify green:** eslint ✓ · tsc ✓ · vitest **7/7** ✓ · vite build ✓ (CSS compiled).
+- **File List:** `web/{package.json,vite.config.ts,src/index.css,src/theme.ts,src/main.tsx,src/App.tsx,src/test-setup.ts,src/components/ThemeToggle.tsx,src/App.test.tsx,src/theme.test.ts}`.
+
 ### Story 1.10: Build the input surface with live recompute
 
 As a user,
