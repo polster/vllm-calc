@@ -433,6 +433,23 @@ So that I trust the answer and understand why.
 **And** the overhead segment expands into its three sub-terms ("show your work")
 **And** motion respects `prefers-reduced-motion` and the layout is usable at 200% zoom.
 
+**Status:** Done (2026-07-10, verified green). **← completes Epic 1 (walking skeleton).**
+
+**Dev Agent Record (Story 1.11):**
+- **`VerdictBanner`**: icon + "Fits/Won't fit" + verdict sentence + vLLM-version label; color **+ icon + text** (never color-alone, NFR17); wrapped in an `aria-live="polite"` region so recompute verdicts are announced.
+- **`VramBreakdownBar`**: CSS stacked bar (weights/KV/overhead) vs. a budget marker; `role="img"` + full-sentence `aria-label`; **screen-reader `<table>` alternative** (sr-only); legend with swatches **and** text labels; **expandable overhead → 3 sub-terms** ("show your work"); width transitions gated by `motion-reduce:transition-none`; **colorblind-safe trio** (indigo/teal/slate) held distinct from status colors.
+- Wired both into `ResultPanel` (replaced the minimal 1.10 view); last-valid-result persistence + inline error retained; recompute dims (not blanks).
+- **a11y automation (UX-DR13):** added `vitest-axe`; an axe smoke test asserts **zero violations** on the rendered result. (axe can't compute color-contrast in jsdom → incomplete, not a violation; pixel-contrast remains design-verified.)
+- **Tests** (`ResultPanel.test.tsx`, 6): verdict fit/no-go + live region, bar role+label + SR budget row, overhead expand, axe no-violations, error-keeps-last-result. Web total **19/19**.
+- **Verify green:** eslint ✓ · tsc ✓ · vitest 19/19 ✓ · vite build ✓.
+- **Live end-to-end smoke (real uvicorn):** `/v1/health` ok · 8 presets served · default scenario → `fits=True, max_concurrent=42` (matches engine golden) · invalid TP → HTTP 400. Stack proven browser-API-engine.
+- **File List:** `web/src/features/calculator/{VerdictBanner.tsx,VramBreakdownBar.tsx,ResultPanel.tsx,ResultPanel.test.tsx}`, `web/package.json` (+vitest-axe).
+
+---
+
+## Epic 1 — COMPLETE (2026-07-10)
+All 11 stories done and green. "Will it fit?" works end-to-end: React SPA → FastAPI `/v1/calculate` → pure engine → verdict + VRAM breakdown + capacity, with curated presets, live recompute, honest conservative labeling, and an accessible UI. **83 automated tests** (64 Python + 19 web) plus a live API smoke. Deferred within-epic polish: searchable-combobox filtering, per-field error placement, formal colorblind-palette validator run. Next: Epic 2 (act on the answer — command generation, remediation).
+
 ---
 
 ## Epic 2: Act on the Answer — Remediation & Runnable Command
