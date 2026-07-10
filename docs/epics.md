@@ -605,6 +605,17 @@ So that a deployment fails before a GPU is ever touched if it won't fit.
 **And** `--json` emits the full machine-readable result object
 **And** the CLI produces identical results to the SPA for identical inputs (parity).
 
+**Status:** Done (2026-07-10, red-green-refactor, verified green).
+
+**Dev Agent Record (Story 3.1):**
+- **Design — thin HTTP client (parity by construction):** the CLI resolves presets and posts a full `CalcInput` to the backend's `POST /v1/calculate`, so its numbers come from the *same engine + same endpoint* as the SPA. This is stronger parity than re-importing the engine, and keeps the CLI free of preset-loading/FastAPI weight. `--api-url` defaults to `http://localhost:8000` (the Story 3.2 Docker backend is what it points at).
+- **`vllm-calc check`** flags: `--model` (preset id), `--gpu id:count`, `--ctx`, `--max-seqs`, `--tp` (defaults to GPU count), `--quant`, `--kv-dtype`, `--gpu-mem-util`, `--api-url`, `--json`. It fetches `/v1/presets/{models,gpus}`, resolves the ids (unknown id → friendly error listing options), derives `model_ref` from the preset's HF source, and posts the config.
+- **CI-gateable exit codes:** `0` fits · `1` won't fit · `2` usage/backend error (unknown preset, unreachable backend, engine constraint error). Human output shows verdict + per-GPU used/budget + capacity + honesty flags/warnings + remediation labels + the runnable command; `--json` emits the full result object verbatim.
+- **Added `httpx~=0.28`** to CLI deps (uv.lock updated); `build_client` is a seam so tests inject an in-process client.
+- **Tests (parity-proving):** `test_cli.py` drives `check` against the **real FastAPI app in-process** via `TestClient` (a sync httpx.Client bridging ASGI) — no network/server. 5 tests: version, fits→exit 0, no-go→exit 1 + suggests fixes, `--json` full result, unknown preset→exit 2. (First tried `httpx.ASGITransport` — async-only, incompatible with the sync client; `TestClient` is the right sync ASGI bridge.)
+- **Verify green:** ruff ✓ · mypy (38 files) ✓ · pytest **90/90** ✓. **Live end-to-end** against a real uvicorn: fits→exit 0, no-go→exit 1, `max_concurrent=42` matches the SPA/engine golden exactly (parity over real HTTP).
+- **File List:** `packages/cli/src/vllm_calc_cli/main.py`, `packages/cli/pyproject.toml`, `packages/cli/tests/test_cli.py`, `uv.lock`.
+
 ### Story 3.2: Package the backend as a local Docker image
 
 As an operator,

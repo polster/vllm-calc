@@ -607,12 +607,14 @@ name = "vllm-calc-cli"
 version = "0.0.0"
 source = { editable = "packages/cli" }
 dependencies = [
+    { name = "httpx" },
     { name = "typer" },
     { name = "vllm-calc-engine" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", specifier = "~=0.28" },
     { name = "typer", specifier = "~=0.26" },
     { name = "vllm-calc-engine", editable = "packages/engine" },
 ]
