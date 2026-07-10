@@ -37,6 +37,12 @@ export interface Breakdown {
   available_for_kv_bytes: number
 }
 
+export interface Remediation {
+  label: string
+  detail: string
+  delta: Partial<CalcInput>
+}
+
 export interface CalcResult {
   fits: boolean
   requested_max_seqs: number
@@ -47,6 +53,7 @@ export interface CalcResult {
   warnings: string[]
   breakdown: Breakdown
   serve_command: string
+  remediations: Remediation[]
 }
 
 export interface ModelPreset {

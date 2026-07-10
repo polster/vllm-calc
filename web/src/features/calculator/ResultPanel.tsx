@@ -1,5 +1,6 @@
-import type { CalcResult } from '../../api/types.ts'
+import type { CalcInput, CalcResult } from '../../api/types.ts'
 import { CommandBlock } from './CommandBlock.tsx'
+import { RemediationChips } from './RemediationChips.tsx'
 import { VerdictBanner } from './VerdictBanner.tsx'
 import { VramBreakdownBar } from './VramBreakdownBar.tsx'
 import type { Status } from './useCalculator.ts'
@@ -8,11 +9,12 @@ interface Props {
   result: CalcResult | null
   status: Status
   error: string | null
+  onApply?: (delta: Partial<CalcInput>) => void
 }
 
 /** The result region: verdict banner + VRAM breakdown. The last valid result
  *  stays visible during recompute (dimmed, not blanked) and across errors. */
-export function ResultPanel({ result, status, error }: Props) {
+export function ResultPanel({ result, status, error, onApply }: Props) {
   return (
     <div aria-busy={status === 'loading'} className="flex flex-col gap-4">
       {error && (
@@ -32,6 +34,9 @@ export function ResultPanel({ result, status, error }: Props) {
           }
         >
           <VerdictBanner result={result} />
+          {onApply && (
+            <RemediationChips remediations={result.remediations} onApply={onApply} />
+          )}
           <VramBreakdownBar breakdown={result.breakdown} />
           <CommandBlock command={result.serve_command} />
 

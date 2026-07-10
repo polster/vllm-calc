@@ -17,6 +17,7 @@ from vllm_calc_engine.kv_cache import kv_bytes_per_token
 from vllm_calc_engine.models import Breakdown, CalcInput, CalcResult
 from vllm_calc_engine.overhead import overhead_bytes
 from vllm_calc_engine.parallelism import plan_tensor_parallel, shard_bytes
+from vllm_calc_engine.remediation import build_remediations
 from vllm_calc_engine.weights import weights_bytes
 
 __all__ = ["calculate"]
@@ -28,7 +29,18 @@ _ACTIVATION_DTYPE_BYTES = 2
 
 
 def calculate(inp: CalcInput) -> CalcResult:
-    """Compute the full sizing result. Raises InvalidParallelism on bad TP config."""
+    """Compute the full sizing result, adding remediations on a no-go.
+
+    Raises InvalidParallelism on a bad TP config.
+    """
+    result = _compute(inp)
+    if not result.fits:
+        result.remediations = build_remediations(inp, result, _compute)
+    return result
+
+
+def _compute(inp: CalcInput) -> CalcResult:
+    """The core sizing computation (no remediations); reused to evaluate fixes."""
     plan = plan_tensor_parallel(
         tp=inp.tensor_parallel_size,
         gpu_count=inp.gpu_count,

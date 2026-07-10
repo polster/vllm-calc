@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from vllm_calc_engine.quantization import KVCacheDtype, WeightQuant
 
-__all__ = ["CalcInput", "Breakdown", "CalcResult", "ModelPreset", "GpuPreset"]
+__all__ = ["CalcInput", "Breakdown", "CalcResult", "Remediation", "ModelPreset", "GpuPreset"]
 
 
 class _Provenance(BaseModel):
@@ -91,6 +91,15 @@ class Breakdown(BaseModel):
     available_for_kv_bytes: int  # budget − weights − overhead
 
 
+class Remediation(BaseModel):
+    """A single-lever change that turns a no-go into a fit, with its exact input
+    delta (a partial CalcInput the UI can apply directly)."""
+
+    label: str  # short chip text, e.g. "FP8 KV cache"
+    detail: str  # e.g. "fits — up to 45 concurrent"
+    delta: dict[str, int | str]
+
+
 class CalcResult(BaseModel):
     """The headline answer: verdict, capacity, breakdown, honesty labels."""
 
@@ -103,3 +112,4 @@ class CalcResult(BaseModel):
     warnings: list[str]
     breakdown: Breakdown
     serve_command: str  # runnable `vllm serve …` matching this configuration
+    remediations: list[Remediation] = Field(default_factory=list)  # populated only on a no-go

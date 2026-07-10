@@ -494,6 +494,18 @@ So that I reach a working setup without a failed launch.
 **And** `RemediationChips` renders them under the verdict
 **And** clicking a chip applies its delta to the inputs and recomputes through the standard live-recompute path.
 
+**Status:** Done (2026-07-10, red-green-refactor, verified green).
+
+**Dev Agent Record (Story 2.2):**
+- **Honesty invariant:** new engine `remediation.py` `build_remediations(inp, base, compute)` returns up to 4 single-lever fixes, and a candidate is offered **only if applying its delta genuinely flips `fits` to True** (verified by re-running the compute). We never suggest a fix that doesn't actually work.
+- **Levers tried (each a lone, explainable change):** FP8 KV cache (if not already), reduce context to the largest common length below current that fits (ladder 128k→1k), higher TP / more GPUs (smallest valid scale-up), reduce concurrency to the supported capacity. Each `Remediation` carries `label`, `detail` (`fits — up to N concurrent`), and the exact `delta` (a partial CalcInput).
+- **No import cycle:** the compute entry point is *injected* into `build_remediations` rather than imported. Factored `calculate()` into a thin wrapper over `_compute()`; `calculate` populates `remediations` only on a no-go.
+- **`Remediation` model** + `remediations: list[Remediation]` (default empty) added to the engine contract; flows through `/v1/calculate` automatically (parity).
+- **`RemediationChips`** renders applyable chips under the verdict; clicking calls `onApply(delta)` → `useCalculator.setInput` → the **standard debounced live-recompute path** (no bespoke SPA logic). Chips hidden when the config fits.
+- **Tests:** engine `test_remediation.py` (7: fits→none, no-go→≥1, **every remediation actually fits**, reduce-to-capacity target, TP divisor validity, no FP8 suggestion when already FP8, cap ≤4); web `RemediationChips.test.tsx` (3: empty→nothing, chip-per-item, click applies exact delta). Fixtures updated.
+- **Verify green:** ruff ✓ · mypy (35 files) ✓ · pytest **78/78** ✓ · web eslint/tsc ✓ · vitest **24/24** ✓ · vite build ✓. **Live API smoke** (128k/32 no-go): offered `Context ≤ 8k` (→42) and `Serve 2 concurrent` (→2), both re-verified `fits=True`; FP8/higher-TP correctly withheld (they don't fit at that workload).
+- **File List:** `packages/engine/src/vllm_calc_engine/{remediation.py,models.py,calculate.py}`, `packages/engine/tests/test_remediation.py`; `web/src/api/types.ts`, `web/src/features/calculator/{RemediationChips.tsx,RemediationChips.test.tsx,ResultPanel.tsx,CalculatorPage.tsx,useCalculator.test.ts,ResultPanel.test.tsx}`.
+
 ### Story 2.3: Expose advanced overhead levers
 
 As an expert user,

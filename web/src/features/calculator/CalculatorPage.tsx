@@ -27,7 +27,7 @@ export function CalculatorPage() {
         data-testid="result-region"
         className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5"
       >
-        <ResultPanel result={result} status={status} error={error} />
+        <ResultPanel result={result} status={status} error={error} onApply={setInput} />
       </section>
     </main>
   )
