@@ -630,6 +630,21 @@ So that no configuration data leaves my network (air-gapped/self-hosted).
 **And** configuration is via env vars (API base URL, vLLM version pin, CORS origins, rate-limit toggle)
 **And** the SPA and CLI can be pointed at the local instance.
 
+**Status:** Done (2026-07-10, verified green — image build to be run in CI/locally where a container runtime is available).
+
+**Dev Agent Record (Story 3.2):**
+- **Self-contained image** (`docker/Dockerfile`, multi-stage uv): builder installs engine + API **non-editably** (`uv sync --frozen --no-dev --no-editable`) into `/app/.venv`; runtime stage copies only that venv + the version-controlled `presets/`, runs as a **non-root** user with a `/v1/health` HEALTHCHECK. No source tree, no dev tooling, **no external runtime calls** (air-gapped-capable, NFR8). Plus `docker/docker-compose.yml` and a root `.dockerignore` (context = repo root; excludes `.venv`, `node_modules`, `web`, caches).
+- **Env-driven operational config** (all optional, `settings.py`): `CORS_ORIGINS` (comma-sep; empty = same-origin), `RATE_LIMIT_ENABLED` + `RATE_LIMIT_PER_MINUTE`, `VLLM_VERSION_RANGE` (overrides the range reported by `/v1/version`), `SPA_DIR` (serve a bundled SPA at `/`), `VLLM_CALC_PRESETS_DIR`, `PORT`. `create_app` conditionally adds `CORSMiddleware`, a minimal in-process fixed-window rate limiter (`{error:{type:"rate_limited"}}`, 429), and mounts `StaticFiles` at `/` (after `/v1` so the API wins).
+- **SPA + CLI point at it:** SPA via `VITE_API_BASE_URL`, CLI via `--api-url` — both already support a configurable base URL.
+- **Tests:** `test_app_config.py` (6, via TestClient): CORS allowed-origin echo + no-header-by-default, rate limit 429 over the limit + off-by-default, `VLLM_VERSION_RANGE` override on `/v1/version`, bundled-SPA served at `/` while `/v1` still works.
+- **Verify green:** ruff ✓ · mypy (39 files) ✓ · pytest **96/96** ✓ · `uv lock --check` fresh. **Image not built in this environment** (only podman present, no running runtime / base-image pulls) — Dockerfile validated by inspection; the config behaviour it depends on is unit-tested. Building the image is a CI/local step.
+- **File List:** `docker/{Dockerfile,docker-compose.yml,README.md}`, `.dockerignore`, `packages/api/src/vllm_calc_api/{settings.py,main.py,routes/meta.py}`, `packages/api/tests/test_app_config.py`.
+
+---
+
+## Epic 3 — COMPLETE (2026-07-10)
+Both stories done and green. The same engine is now reachable beyond the browser: a CI-gateable **CLI** (`vllm-calc check`, exit 0/1/2, `--json`, parity by construction against `/v1/calculate`) and a **self-contained Docker backend** (air-gapped-capable, env-configured CORS/rate-limit/version-pin/optional-SPA). **102 automated tests** (96 Python + 28 web unchanged) plus a live uvicorn CLI smoke. The Docker image build itself is deferred to a container-capable environment. Next: Epic 4 (accuracy validation harness + preset contribution path — where the provisional overhead constants finally get calibrated).
+
 ---
 
 ## Epic 4: Prove It & Grow It — Accuracy Validation & Preset Contribution

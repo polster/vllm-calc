@@ -1,0 +1,21 @@
+# Local run convenience for the vllm-calc backend.
+#   docker compose -f docker/docker-compose.yml up --build
+# Then point the SPA (VITE_API_BASE_URL) or CLI (--api-url) at http://localhost:8000.
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: vllm-calc-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # All optional — uncomment to configure. The core calculation needs none of them.
+      # CORS_ORIGINS: "http://localhost:5173"   # allow a separately-hosted SPA
+      # RATE_LIMIT_ENABLED: "1"
+      # RATE_LIMIT_PER_MINUTE: "120"
+      # VLLM_VERSION_RANGE: ">=0.13,<0.14"       # override the reported calibrated range
+      # SPA_DIR: "/app/spa"                      # serve a bundled SPA from this container
+      PORT: "8000"
+    # No external network is required at runtime (air-gapped-capable).

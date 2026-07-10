@@ -4,7 +4,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 import vllm_calc_engine
-from vllm_calc_engine.constants import SUPPORTED_VLLM_RANGE
+from vllm_calc_api import settings
 
 router = APIRouter(tags=["meta"])
 
@@ -27,5 +27,5 @@ def health() -> Health:
 def version() -> Version:
     return Version(
         engine_version=vllm_calc_engine.__version__,
-        supported_vllm_range=SUPPORTED_VLLM_RANGE,
+        supported_vllm_range=settings.vllm_version_range(),
     )
