@@ -1,0 +1,5 @@
+id: l40s
+name: NVIDIA L40S
+vram_gib: 48
+source: https://www.nvidia.com/en-us/data-center/l40s/
+last_verified: "2026-07-09"

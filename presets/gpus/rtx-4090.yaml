@@ -1,0 +1,5 @@
+id: rtx-4090
+name: NVIDIA GeForce RTX 4090
+vram_gib: 24
+source: https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4090/
+last_verified: "2026-07-09"

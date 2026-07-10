@@ -1,0 +1,11 @@
+id: qwen2.5-7b
+name: Qwen2.5 7B
+total_params: 7610000000
+layers: 28
+attention_heads: 28
+kv_heads: 4
+head_dim: 128
+hidden_size: 3584
+is_moe: false
+source: https://huggingface.co/Qwen/Qwen2.5-7B
+last_verified: "2026-07-09"

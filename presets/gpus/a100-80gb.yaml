@@ -1,0 +1,5 @@
+id: a100-80gb
+name: NVIDIA A100 80GB
+vram_gib: 80
+source: https://www.nvidia.com/en-us/data-center/a100/
+last_verified: "2026-07-09"

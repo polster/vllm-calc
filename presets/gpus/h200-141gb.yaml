@@ -1,0 +1,5 @@
+id: h200-141gb
+name: NVIDIA H200 141GB
+vram_gib: 141
+source: https://www.nvidia.com/en-us/data-center/h200/
+last_verified: "2026-07-09"

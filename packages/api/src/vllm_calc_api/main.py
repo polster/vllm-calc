@@ -1,39 +1,32 @@
-"""FastAPI application factory and versioned meta endpoints."""
+"""FastAPI application factory.
 
-from fastapi import APIRouter, FastAPI
-from pydantic import BaseModel
+Thin HTTP layer over the engine. Owns no calculation logic (parity invariant).
+Presets are loaded and validated once at startup (fail-fast); all business routes
+live under the versioned /v1 prefix.
+"""
+
+from fastapi import FastAPI
 
 import vllm_calc_engine
-from vllm_calc_engine.constants import SUPPORTED_VLLM_RANGE
+from vllm_calc_api import settings
+from vllm_calc_api.errors import register_exception_handlers
+from vllm_calc_api.presets_loader import load_gpu_presets, load_model_presets
+from vllm_calc_api.routes import calculate, meta, presets
 
-v1 = APIRouter(prefix="/v1")
-
-
-class Health(BaseModel):
-    status: str
-
-
-class Version(BaseModel):
-    engine_version: str
-    supported_vllm_range: str
-
-
-@v1.get("/health")
-def health() -> Health:
-    return Health(status="ok")
-
-
-@v1.get("/version")
-def version() -> Version:
-    return Version(
-        engine_version=vllm_calc_engine.__version__,
-        supported_vllm_range=SUPPORTED_VLLM_RANGE,
-    )
+__all__ = ["create_app"]
 
 
 def create_app() -> FastAPI:
     app = FastAPI(title="vllm-calc", version=vllm_calc_engine.__version__)
-    app.include_router(v1)
+
+    # Load + validate presets once at startup (fail-fast on a bad preset).
+    base = settings.presets_dir()
+    app.state.model_presets = load_model_presets(base / "models")
+    app.state.gpu_presets = load_gpu_presets(base / "gpus")
+
+    register_exception_handlers(app)
+    for router in (meta.router, calculate.router, presets.router):
+        app.include_router(router, prefix="/v1")
     return app
 
 

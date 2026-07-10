@@ -1,0 +1,11 @@
+id: mistral-7b-v0.3
+name: Mistral 7B v0.3
+total_params: 7250000000
+layers: 32
+attention_heads: 32
+kv_heads: 8
+head_dim: 128
+hidden_size: 4096
+is_moe: false
+source: https://huggingface.co/mistralai/Mistral-7B-v0.3
+last_verified: "2026-07-09"

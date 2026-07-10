@@ -328,6 +328,16 @@ So that I can size common setups without hand-entering architecture params.
 **And** the curated baseline covers the top ~15–20 models and common GPUs, each with provenance fields
 **And** each preset's `id` matches its filename stem.
 
+**Status:** Done (2026-07-10, verified green).
+
+**Dev Agent Record (Story 1.7):**
+- Added engine-owned Pydantic preset schema (`ModelPreset`, `GpuPreset` with a `_Provenance` base: `source` + `last_verified`) to `models.py`, and `api/presets_loader.py` (`load_model_presets`/`load_gpu_presets`) that reads `presets/{models,gpus}/*.yaml`, validates against the schema, **fails fast** (`PresetError`) on malformed/invalid/duplicate, and enforces **id == filename stem**. Added `pyyaml` (api) + `types-pyyaml` (dev); `uv.lock` updated.
+- **Curated baseline (accuracy-first): 8 models + 6 GPUs.** Models: Llama-3.1 8B/70B/405B, Llama-3.3-70B, Qwen2.5 7B/72B, Mistral-7B-v0.3, Mixtral-8x7B (MoE, total params). GPUs: RTX 4090, L40S, A100 40/80GB, H100 80GB, H200 141GB. **Deliberately below the ~15–20 target:** models with uncertain architecture (Gemma-2 head_dim ambiguity; DeepSeek/MLA — deferred) were excluded rather than ship wrong numbers — the readiness report's "narrow to what's validated" fallback. Expansion is the Epic 4 contribution path (Story 4.2). Key Qwen2.5 architectures web-verified. All presets carry provenance.
+- **Tests** (`api/tests/test_presets_loader.py`, 7): loads curated models/GPUs, MoE flag, provenance present, **preset→CalcInput→calculate() integration** (engine-ready), malformed fails fast, id/stem mismatch fails.
+- Ruff nudge applied: PEP 695 type-parameter syntax on the generic loader.
+- **Verify green:** ruff ✓ · mypy (24 files) ✓ · pytest **58/58** ✓.
+- **File List:** `packages/engine/src/vllm_calc_engine/models.py`, `packages/api/src/vllm_calc_api/presets_loader.py`, `packages/api/pyproject.toml`, root `pyproject.toml`, `uv.lock`, `presets/models/*.yaml` (8), `presets/gpus/*.yaml` (6), `packages/api/tests/test_presets_loader.py`.
+
 ### Story 1.8: Expose the calculation over the HTTP API
 
 As a developer,
@@ -342,6 +352,16 @@ So that any surface can get identical results from one source of truth.
 **And** `GET /v1/presets/models`, `/v1/presets/gpus`, `/v1/health`, `/v1/version` respond correctly
 **And** engine constraint/validation errors map to the structured error contract with the right HTTP status
 **And** OpenAPI is generated and a typed client can be produced from it.
+
+**Status:** Done (2026-07-10, red-green-refactor, verified green).
+
+**Dev Agent Record (Story 1.8):**
+- Refactored `main.py` into an app factory that loads+validates presets at startup (fail-fast) into `app.state`, registers exception handlers, and mounts routers under `/v1`. Added `settings.py` (env-overridable presets dir), `errors.py` (structured `{error:{type,message,details?}}` contract + handlers), and `routes/{meta,calculate,presets}.py`.
+- **`POST /v1/calculate`** wraps `engine.calculate()` (no logic in the API) → full `CalcResult` as snake_case JSON. **`GET /v1/presets/models|gpus`** list curated presets from app state. `/v1/health`, `/v1/version` moved to `routes/meta`.
+- **Error mapping:** `InvalidParallelism` → 400 `constraint_violation`; `UnsupportedArchitecture` → 400 `unsupported`; request-body validation → 422 `validation`. OpenAPI auto-generated at `/openapi.json` (typed-client source for the SPA in Story 1.10).
+- **Tests** (`api/tests/test_calculate_endpoint.py`, 6): calculate happy-path (snake_case, golden 42/fits, nested breakdown), constraint-violation→400 contract, request-validation→422 contract, model/GPU preset listing, OpenAPI exposes `/v1/calculate`. Existing meta tests still green.
+- **Verify green:** ruff ✓ · mypy (31 files) ✓ · pytest **64/64** ✓.
+- **File List:** `packages/api/src/vllm_calc_api/{main.py,settings.py,errors.py,routes/__init__.py,routes/meta.py,routes/calculate.py,routes/presets.py}`, `packages/api/tests/test_calculate_endpoint.py`.
 
 ### Story 1.9: Establish the SPA design-system foundation and app shell
 

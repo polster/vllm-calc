@@ -1,0 +1,11 @@
+id: mixtral-8x7b
+name: Mixtral 8x7B
+total_params: 46700000000
+layers: 32
+attention_heads: 32
+kv_heads: 8
+head_dim: 128
+hidden_size: 4096
+is_moe: true
+source: https://huggingface.co/mistralai/Mixtral-8x7B-v0.1
+last_verified: "2026-07-09"

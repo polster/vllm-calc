@@ -10,7 +10,36 @@ from pydantic import BaseModel, Field
 
 from vllm_calc_engine.quantization import KVCacheDtype, WeightQuant
 
-__all__ = ["CalcInput", "Breakdown", "CalcResult"]
+__all__ = ["CalcInput", "Breakdown", "CalcResult", "ModelPreset", "GpuPreset"]
+
+
+class _Provenance(BaseModel):
+    """Where a preset's numbers came from and when they were last checked."""
+
+    source: str = Field(description="Origin of the values (e.g. HF repo or vendor spec).")
+    last_verified: str = Field(description="ISO date the values were last verified.")
+
+
+class ModelPreset(_Provenance):
+    """A curated model's architecture, sufficient to size its VRAM."""
+
+    id: str
+    name: str
+    total_params: int = Field(gt=0, description="Total params (MoE: all experts).")
+    layers: int = Field(gt=0)
+    attention_heads: int = Field(gt=0)
+    kv_heads: int = Field(gt=0)
+    head_dim: int = Field(gt=0)
+    hidden_size: int = Field(gt=0)
+    is_moe: bool = False
+
+
+class GpuPreset(_Provenance):
+    """A curated GPU's usable VRAM."""
+
+    id: str
+    name: str
+    vram_gib: float = Field(gt=0, description="Device VRAM per GPU, in GiB.")
 
 
 class CalcInput(BaseModel):
