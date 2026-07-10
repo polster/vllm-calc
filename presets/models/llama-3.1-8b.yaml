@@ -9,3 +9,4 @@ hidden_size: 4096
 is_moe: false
 source: https://huggingface.co/meta-llama/Llama-3.1-8B
 last_verified: "2026-07-09"
+vllm_version_checked: "0.13"

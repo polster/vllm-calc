@@ -18,6 +18,7 @@ const QWEN: ModelPreset = {
   attention_type: 'standard',
   source: 'hf',
   last_verified: '2026-07-10',
+  vllm_version_checked: '0.13',
 }
 
 describe('InputPanel', () => {

@@ -21,6 +21,8 @@ jobs:
         run: uv run mypy .
       - name: Test (pytest)
         run: uv run pytest
+      - name: Validate presets (schema + provenance)
+        run: uv run python -m vllm_calc_api.preset_validation
 
   web:
     runs-on: ubuntu-latest

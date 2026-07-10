@@ -1,0 +1,95 @@
+{
+  "$defs": {
+    "AttentionType": {
+      "enum": [
+        "standard",
+        "mla",
+        "sliding_window",
+        "other"
+      ],
+      "title": "AttentionType",
+      "type": "string"
+    }
+  },
+  "description": "A curated model's architecture, sufficient to size its VRAM.",
+  "properties": {
+    "source": {
+      "description": "Origin of the values (e.g. HF repo or vendor spec).",
+      "title": "Source",
+      "type": "string"
+    },
+    "last_verified": {
+      "description": "ISO date the values were last verified.",
+      "title": "Last Verified",
+      "type": "string"
+    },
+    "vllm_version_checked": {
+      "description": "vLLM version the preset's values were checked against.",
+      "title": "Vllm Version Checked",
+      "type": "string"
+    },
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "total_params": {
+      "description": "Total params (MoE: all experts).",
+      "exclusiveMinimum": 0,
+      "title": "Total Params",
+      "type": "integer"
+    },
+    "layers": {
+      "exclusiveMinimum": 0,
+      "title": "Layers",
+      "type": "integer"
+    },
+    "attention_heads": {
+      "exclusiveMinimum": 0,
+      "title": "Attention Heads",
+      "type": "integer"
+    },
+    "kv_heads": {
+      "exclusiveMinimum": 0,
+      "title": "Kv Heads",
+      "type": "integer"
+    },
+    "head_dim": {
+      "exclusiveMinimum": 0,
+      "title": "Head Dim",
+      "type": "integer"
+    },
+    "hidden_size": {
+      "exclusiveMinimum": 0,
+      "title": "Hidden Size",
+      "type": "integer"
+    },
+    "is_moe": {
+      "default": false,
+      "title": "Is Moe",
+      "type": "boolean"
+    },
+    "attention_type": {
+      "$ref": "#/$defs/AttentionType",
+      "default": "standard"
+    }
+  },
+  "required": [
+    "source",
+    "last_verified",
+    "vllm_version_checked",
+    "id",
+    "name",
+    "total_params",
+    "layers",
+    "attention_heads",
+    "kv_heads",
+    "head_dim",
+    "hidden_size"
+  ],
+  "title": "ModelPreset",
+  "type": "object"
+}

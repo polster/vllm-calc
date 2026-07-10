@@ -665,6 +665,17 @@ So that a wrong or malformed preset can never reach users.
 **And** each preset must carry provenance fields (source, last_verified, vllm_version_checked)
 **And** a suspiciously low param count for a known-MoE model raises a warning.
 
+**Status:** Done (2026-07-10, red-green-refactor, verified green).
+
+**Dev Agent Record (Story 4.1):**
+- **Provenance tightened:** added required `vllm_version_checked` to the engine's `_Provenance` (so both `ModelPreset` and `GpuPreset` require it); backfilled all **14** preset files (`"0.13"`). Web `ModelPreset`/`GpuPreset` types + the QWEN test fixture updated to match.
+- **JSON Schema generated & committed:** `presets/schema/{model,gpu}.schema.json` from the Pydantic models (`write_schemas`), for external tooling/editor validation. The loader's `model_validate` remains the runtime source of truth (same schema).
+- **`preset_validation.py`:** `validate_presets(base) → (errors, warnings)` runs the fail-fast loader (any schema/provenance/id-mismatch violation → error) and the MoE heuristic; `moe_param_warnings` flags `is_moe` presets with `total_params < 15B` (the classic "entered ACTIVE not TOTAL params" mistake) as an advisory **warning** (never fails). Runnable as `python -m vllm_calc_api.preset_validation` (exit 1 on error).
+- **CI-wired:** new "Validate presets" step in `ci.yml` runs the module on every PR/push.
+- **Tests:** `test_preset_validation.py` (4): shipped presets clean (0 errors/0 warnings), low-param MoE warns / real Mixtral doesn't, missing `vllm_version_checked` fails, id/filename mismatch still fails. Fixed the pre-existing loader test whose fixture predated the new required field.
+- **Verify green:** ruff ✓ · mypy (41 files) ✓ · pytest **100/100** ✓ · web tsc ✓ · vitest **35/35** ✓ · validator prints "8 model + 6 GPU presets valid (0 warnings)".
+- **File List:** `packages/engine/src/vllm_calc_engine/models.py`; `packages/api/src/vllm_calc_api/preset_validation.py`, `packages/api/tests/{test_preset_validation.py,test_presets_loader.py}`; `presets/{models,gpus}/*.yaml` (14), `presets/schema/{model,gpu}.schema.json`; `.github/workflows/ci.yml`; `web/src/api/types.ts`, `web/src/features/calculator/InputPanel.test.tsx`.
+
 ### Story 4.2: Provide a preset contribution path
 
 As a community contributor,

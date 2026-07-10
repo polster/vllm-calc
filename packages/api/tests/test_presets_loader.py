@@ -66,7 +66,8 @@ def test_malformed_preset_fails_fast(tmp_path: Path) -> None:
 
 def test_id_filename_mismatch_fails(tmp_path: Path) -> None:
     (tmp_path / "a100-80gb.yaml").write_text(
-        'id: wrong-id\nname: X\nvram_gib: 80\nsource: s\nlast_verified: "2026-07-09"\n'
+        'id: wrong-id\nname: X\nvram_gib: 80\nsource: s\n'
+        'last_verified: "2026-07-09"\nvllm_version_checked: "0.13"\n'
     )
     with pytest.raises(PresetError, match="must match filename stem"):
         load_gpu_presets(tmp_path)

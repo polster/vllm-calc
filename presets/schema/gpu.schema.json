@@ -1,0 +1,44 @@
+{
+  "description": "A curated GPU's usable VRAM.",
+  "properties": {
+    "source": {
+      "description": "Origin of the values (e.g. HF repo or vendor spec).",
+      "title": "Source",
+      "type": "string"
+    },
+    "last_verified": {
+      "description": "ISO date the values were last verified.",
+      "title": "Last Verified",
+      "type": "string"
+    },
+    "vllm_version_checked": {
+      "description": "vLLM version the preset's values were checked against.",
+      "title": "Vllm Version Checked",
+      "type": "string"
+    },
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "vram_gib": {
+      "description": "Device VRAM per GPU, in GiB.",
+      "exclusiveMinimum": 0,
+      "title": "Vram Gib",
+      "type": "number"
+    }
+  },
+  "required": [
+    "source",
+    "last_verified",
+    "vllm_version_checked",
+    "id",
+    "name",
+    "vram_gib"
+  ],
+  "title": "GpuPreset",
+  "type": "object"
+}

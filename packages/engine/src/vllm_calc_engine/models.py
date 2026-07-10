@@ -27,6 +27,9 @@ class _Provenance(BaseModel):
 
     source: str = Field(description="Origin of the values (e.g. HF repo or vendor spec).")
     last_verified: str = Field(description="ISO date the values were last verified.")
+    vllm_version_checked: str = Field(
+        description="vLLM version the preset's values were checked against."
+    )
 
 
 class ModelPreset(_Provenance):

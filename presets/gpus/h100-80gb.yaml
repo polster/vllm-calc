@@ -3,3 +3,4 @@ name: NVIDIA H100 80GB
 vram_gib: 80
 source: https://www.nvidia.com/en-us/data-center/h100/
 last_verified: "2026-07-09"
+vllm_version_checked: "0.13"

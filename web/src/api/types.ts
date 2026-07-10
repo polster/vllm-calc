@@ -77,6 +77,7 @@ export interface ModelPreset {
   attention_type: AttentionType
   source: string
   last_verified: string
+  vllm_version_checked: string
 }
 
 export interface GpuPreset {
@@ -85,6 +86,7 @@ export interface GpuPreset {
   vram_gib: number
   source: string
   last_verified: string
+  vllm_version_checked: string
 }
 
 /** Structured error contract: {error:{type,message,details?}}. */
