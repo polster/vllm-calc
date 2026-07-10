@@ -15,6 +15,10 @@ __all__ = ["serve_command"]
 # swaps it for their HF repo id or local path.
 _MODEL_PLACEHOLDER = "<your-model>"
 
+# Mirrors CalcInput's default so `--max-num-batched-tokens` is emitted only when
+# the user actually overrode it (kept in sync automatically).
+_DEFAULT_MAX_BATCHED = CalcInput.model_fields["max_num_batched_tokens"].default
+
 # WeightQuant → vLLM `--quantization` value. Full-precision schemes (fp32/fp16/
 # bf16) and plain int8 have no single canonical serve flag, so they map to None
 # (flag omitted) rather than emitting something vLLM would reject.
@@ -53,5 +57,11 @@ def serve_command(inp: CalcInput) -> str:
     parts += ["--max-model-len", str(inp.ctx_len)]
     # `:g` drops trailing zeros: 0.9 → "0.9", 0.95 → "0.95".
     parts += ["--gpu-memory-utilization", f"{inp.gpu_memory_utilization:g}"]
+
+    # Advanced overhead levers — only when they diverge from vLLM's defaults.
+    if inp.max_num_batched_tokens != _DEFAULT_MAX_BATCHED:
+        parts += ["--max-num-batched-tokens", str(inp.max_num_batched_tokens)]
+    if inp.enforce_eager:
+        parts.append("--enforce-eager")
 
     return " ".join(parts)

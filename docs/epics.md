@@ -520,6 +520,16 @@ So that I can model non-default vLLM overhead behavior.
 **And** `enforce_eager` set true zeroes the CUDA-graph overhead term
 **And** the generated command reflects any lever that maps to a vLLM flag.
 
+**Status:** Done (2026-07-10, red-green-refactor, verified green).
+
+**Dev Agent Record (Story 2.3):**
+- **Mostly already in place from Epic 1:** the Advanced group (`max_num_batched_tokens`, `enforce_eager`, `max_num_seqs_cap`) already exists in `InputPanel`, flows through `useCalculator`'s debounced live recompute, and the engine's `overhead_bytes` already zeroes the CUDA-graph term under `enforce_eager` (Story 1.4). This story closed the last gap: **the generated command now reflects the overhead levers.**
+- **`serve_command` extended:** appends `--enforce-eager` when set, and `--max-num-batched-tokens N` **only when the user overrode the default** (default read from `CalcInput.model_fields[...].default` so it stays in sync). Default configs still produce the clean golden command (unchanged), so no existing test broke.
+- **Scope note:** `max_num_seqs_cap` (→ `--max-num-seqs`) is a capacity lever rather than an overhead lever; left out of this story's command flags to keep 2.3 focused on the two AC-named overhead levers.
+- **Tests:** engine `test_command.py` +3 (enforce-eager flag, default levers add nothing, non-default max-num-batched-tokens emitted); web `InputPanel.test.tsx` +1 (enforce_eager checkbox toggles the input live).
+- **Verify green:** ruff ✓ · mypy (35 files) ✓ · pytest **81/81** ✓ · web eslint/tsc ✓ · vitest **25/25** ✓ · vite build ✓. Command smoke: `… --max-num-batched-tokens 8192 --enforce-eager` emitted; FP16 correctly omits `--quantization`.
+- **File List:** `packages/engine/src/vllm_calc_engine/command.py`, `packages/engine/tests/test_command.py`, `web/src/features/calculator/InputPanel.test.tsx`.
+
 ### Story 2.4: Surface honest over-provision and unsupported flags
 
 As a user,

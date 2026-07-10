@@ -39,4 +39,13 @@ describe('InputPanel', () => {
     fireEvent.change(screen.getByLabelText('Context length'), { target: { value: '4096' } })
     expect(setInput).toHaveBeenCalledWith({ ctx_len: 4096 })
   })
+
+  it('toggles the enforce_eager advanced lever', () => {
+    const setInput = vi.fn()
+    render(
+      <InputPanel input={DEFAULT_INPUT} setInput={setInput} modelPresets={[]} gpuPresets={[]} />,
+    )
+    fireEvent.click(screen.getByRole('checkbox'))
+    expect(setInput).toHaveBeenCalledWith({ enforce_eager: true })
+  })
 })

@@ -64,6 +64,23 @@ def test_gpu_memory_utilization_formatted_without_trailing_zeros() -> None:
     assert "--gpu-memory-utilization 0.95" in cmd
 
 
+def test_enforce_eager_adds_the_flag() -> None:
+    cmd = serve_command(BASE.model_copy(update={"enforce_eager": True}))
+    assert "--enforce-eager" in cmd
+
+
+def test_default_advanced_levers_add_no_flags() -> None:
+    # BASE uses the default max_num_batched_tokens (2048) and enforce_eager=False.
+    cmd = serve_command(BASE)
+    assert "--enforce-eager" not in cmd
+    assert "--max-num-batched-tokens" not in cmd
+
+
+def test_non_default_max_num_batched_tokens_is_emitted() -> None:
+    cmd = serve_command(BASE.model_copy(update={"max_num_batched_tokens": 8192}))
+    assert "--max-num-batched-tokens 8192" in cmd
+
+
 def test_calculate_result_carries_the_command() -> None:
     from vllm_calc_engine.calculate import calculate
 
