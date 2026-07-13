@@ -8,9 +8,11 @@ on:
     - cron: "0 6 * * 1" # Mondays 06:00 UTC
   workflow_dispatch:
   push:
+    branches: [main]
     paths:
+      # Only the cost-driving inputs — not harness code/tests/README, which would
+      # otherwise spin up the self-hosted GPU runner on every edit.
       - "packages/validation/matrix.yaml"
-      - "packages/validation/**"
 
 jobs:
   gpu-validate:

@@ -24,8 +24,9 @@ export function decodeInput(search: string): CalcInput {
     if (key === 'model_ref') {
       out[key] = raw === '' ? null : raw
     } else if (typeof def === 'number') {
+      // Keep the default for blanks and non-finite garbage ('', ' ', 'Infinity').
       const n = Number(raw)
-      if (!Number.isNaN(n)) out[key] = n // ignore garbage, keep the default
+      if (raw.trim() !== '' && Number.isFinite(n)) out[key] = n
     } else if (typeof def === 'boolean') {
       out[key] = raw === '1'
     } else {

@@ -9,9 +9,9 @@ export function HonestyCallout({ flags }: { flags: Flag[] }) {
 
   return (
     <div className="flex flex-col gap-2">
-      {flags.map((f) => (
+      {flags.map((f, i) => (
         <div
-          key={f.type + f.message}
+          key={`${i}-${f.type}`}
           role="note"
           className="flex gap-2 rounded-md border px-3 py-2 text-xs"
           style={{

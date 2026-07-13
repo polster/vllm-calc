@@ -46,11 +46,13 @@ def serve_command(inp: CalcInput) -> str:
     parts: list[str] = ["vllm", "serve", inp.model_ref or _MODEL_PLACEHOLDER]
     parts += ["--tensor-parallel-size", str(inp.tensor_parallel_size)]
 
-    quant = _QUANT_FLAG.get(inp.weight_quant)
+    # Subscript (not .get) so a newly-added quant/dtype member missing from these
+    # maps fails loudly at generation time rather than silently omitting the flag.
+    quant = _QUANT_FLAG[inp.weight_quant]
     if quant is not None:
         parts += ["--quantization", quant]
 
-    kv = _KV_DTYPE_FLAG.get(inp.kv_dtype)
+    kv = _KV_DTYPE_FLAG[inp.kv_dtype]
     if kv is not None:
         parts += ["--kv-cache-dtype", kv]
 

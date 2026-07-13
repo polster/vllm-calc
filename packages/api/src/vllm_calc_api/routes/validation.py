@@ -31,7 +31,12 @@ def validation() -> ValidationStatus:
     path = settings.validation_results_path()
     if not path.is_file():
         return ValidationStatus(status="pending", calibrated_vllm_range=calibrated)
-    data = json.loads(path.read_text())
+    try:
+        data = json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError):
+        # A truncated/half-written results file (the harness write isn't atomic) must
+        # not 500 — report "pending" until a valid summary is published.
+        return ValidationStatus(status="pending", calibrated_vllm_range=calibrated)
     return ValidationStatus(
         status="validated",
         calibrated_vllm_range=calibrated,

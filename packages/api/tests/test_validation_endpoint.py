@@ -42,3 +42,14 @@ def test_validated_when_results_present(
     assert body["pass_rate"] == 1.0
     assert body["gate_passed"] is True
     assert body["vllm_version"] == "0.13.0"
+
+
+def test_malformed_results_file_reports_pending_not_500(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    results = tmp_path / "validation-results.json"
+    results.write_text('{"vllm_version": "0.13.0", "pass_r')  # truncated / half-written
+    monkeypatch.setenv("VALIDATION_RESULTS_PATH", str(results))
+    resp = TestClient(create_app()).get("/v1/validation")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "pending"

@@ -7,7 +7,6 @@ optional bundled SPA) is env-driven so one image runs hosted or air-gapped.
 """
 
 import time
-from collections import defaultdict
 from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request, Response
@@ -63,15 +62,23 @@ def _install_rate_limit(app: FastAPI, per_minute: int) -> None:
     Sufficient for a single stateless instance; a shared store would be needed to
     limit across horizontally-scaled replicas.
     """
-    hits: dict[str, list[float]] = defaultdict(list)
+    hits: dict[str, list[float]] = {}
+    last_sweep = 0.0
 
     @app.middleware("http")
     async def _rate_limit(
         request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
+        nonlocal last_sweep
         client = request.client.host if request.client else "anonymous"
         now = time.monotonic()
-        recent = [t for t in hits[client] if now - t < 60.0]
+        # Periodic sweep so idle clients' entries can't accumulate unbounded (a
+        # unique-IP spray would otherwise be a memory-exhaustion vector).
+        if now - last_sweep > 60.0:
+            for stale in [k for k, ts in hits.items() if all(now - t >= 60.0 for t in ts)]:
+                del hits[stale]
+            last_sweep = now
+        recent = [t for t in hits.get(client, []) if now - t < 60.0]
         if len(recent) >= per_minute:
             hits[client] = recent
             return JSONResponse(

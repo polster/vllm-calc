@@ -28,4 +28,14 @@ describe('CommandBlock', () => {
     expect(await screen.findByText('Copied ✓')).toBeInTheDocument()
     expect(screen.getByText('Command copied to clipboard')).toBeInTheDocument()
   })
+
+  it('does not claim success when the Clipboard API is unavailable', async () => {
+    vi.stubGlobal('navigator', {}) // no clipboard (insecure context / old browser)
+    render(<CommandBlock command={CMD} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
+    // Give any (incorrect) async success path a chance to run, then assert it didn't.
+    await Promise.resolve()
+    expect(screen.queryByText('Copied ✓')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
+  })
 })

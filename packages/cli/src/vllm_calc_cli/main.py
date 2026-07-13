@@ -78,10 +78,16 @@ def check(
         typer.secho(f"Invalid --gpu '{gpu}': expected 'id:count'.", err=True, fg="red")
         raise typer.Exit(_EXIT_ERROR) from None
 
+    # `tp or gpu_count` would swallow an explicit --tp 0; distinguish "unset" from 0.
+    tp_size = gpu_count if tp is None else tp
+    if tp_size < 1:
+        typer.secho(f"Invalid --tp {tp}: must be ≥ 1.", err=True, fg="red")
+        raise typer.Exit(_EXIT_ERROR)
+
     try:
         with build_client(api_url) as client:
             result = _run_check(
-                client, model, gpu_id, gpu_count, tp or gpu_count, ctx, max_seqs,
+                client, model, gpu_id, gpu_count, tp_size, ctx, max_seqs,
                 quant, kv_dtype, gpu_mem_util,
             )
     except httpx.HTTPError as exc:
@@ -134,8 +140,14 @@ def _run_check(
     }
     resp = client.post("/v1/calculate", json=payload)
     if resp.status_code != httpx.codes.OK:
-        body = resp.json()
-        msg = body["error"]["message"] if isinstance(body, dict) and "error" in body else resp.text
+        # A non-JSON error body (plaintext 500, proxy error page) must still exit 2,
+        # not escape as an unclassified error.
+        try:
+            body = resp.json()
+            has_error = isinstance(body, dict) and "error" in body
+            msg = body["error"]["message"] if has_error else resp.text
+        except ValueError:
+            msg = resp.text
         typer.secho(f"Error: {msg}", err=True, fg="red")
         raise typer.Exit(_EXIT_ERROR)
     result: dict[str, Any] = resp.json()

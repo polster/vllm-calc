@@ -74,3 +74,11 @@ def test_unknown_model_preset_exits_two() -> None:
     )
     assert result.exit_code == 2
     assert "Unknown model preset" in result.output
+
+
+def test_explicit_tp_zero_is_rejected_not_swallowed() -> None:
+    result = runner.invoke(
+        app, ["check", "--model", "llama-3.3-70b", "--gpu", "a100-80gb:2", "--tp", "0"]
+    )
+    assert result.exit_code == 2
+    assert "must be ≥ 1" in result.output

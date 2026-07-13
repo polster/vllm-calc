@@ -17,6 +17,11 @@ describe('urlState', () => {
     expect(decodeInput('ctx_len=notanumber').ctx_len).toBe(DEFAULT_INPUT.ctx_len)
   })
 
+  it('falls back to the default for empty and non-finite numbers', () => {
+    expect(decodeInput('ctx_len=').ctx_len).toBe(DEFAULT_INPUT.ctx_len)
+    expect(decodeInput('total_params=Infinity').total_params).toBe(DEFAULT_INPUT.total_params)
+  })
+
   it('decodes an empty model_ref as null (custom model)', () => {
     expect(decodeInput('model_ref=').model_ref).toBeNull()
   })

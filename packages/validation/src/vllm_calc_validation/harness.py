@@ -73,7 +73,19 @@ def compare(label: str, predicted: int, measured: int, fits: bool) -> CaseResult
     Under-predicting on a "fits" verdict is the worst failure — we'd have told the
     user it fits when it may not — so it fails even if it lands within tolerance.
     """
-    error_pct = (predicted - measured) / measured * 100 if measured else 0.0
+    if measured <= 0:
+        # A non-positive measurement means the GPU measurement failed — fail loudly
+        # rather than grading a broken run as a perfect 0% error.
+        return CaseResult(
+            label=label,
+            fits=fits,
+            predicted_bytes=predicted,
+            measured_bytes=measured,
+            error_pct=0.0,
+            under_prediction=False,
+            passed=False,
+        )
+    error_pct = (predicted - measured) / measured * 100
     under_prediction = predicted < measured
     passed = abs(error_pct) <= TOLERANCE_PCT and not (fits and under_prediction)
     return CaseResult(
@@ -120,7 +132,7 @@ def main() -> int:  # pragma: no cover - entry point for the GPU runner
 
     from vllm_calc_validation.report import publish, summarize
 
-    matrix = load_matrix(Path(__file__).resolve().parents[3] / "matrix.yaml")
+    matrix = load_matrix(Path(__file__).resolve().parents[2] / "matrix.yaml")
     results = run_matrix(matrix, measure_reserved_bytes)
     summary = summarize(results, matrix.vllm_version)
     print(summary.model_dump_json(indent=2))

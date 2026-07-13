@@ -16,8 +16,8 @@ export function RemediationChips({
     <div>
       <p className="mb-1.5 text-xs text-[var(--muted)]">Ways to make it fit</p>
       <ul className="flex flex-wrap gap-2">
-        {remediations.map((r) => (
-          <li key={r.label}>
+        {remediations.map((r, i) => (
+          <li key={`${i}-${r.label}`}>
             <button
               type="button"
               onClick={() => onApply(r.delta)}

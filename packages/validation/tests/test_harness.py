@@ -41,6 +41,13 @@ def test_compare_out_of_tolerance_fails() -> None:
     assert not r.passed
 
 
+def test_compare_non_positive_measurement_fails_loudly() -> None:
+    # A broken measurement (0 bytes) must fail, not grade as a perfect 0% error.
+    r = compare("case", predicted=100, measured=0, fits=True)
+    assert not r.passed
+    assert not r.under_prediction
+
+
 def test_run_matrix_uses_injected_measurement() -> None:
     matrix = load_matrix(MATRIX_PATH)
     # Fake "measured" = 3% BELOW prediction → every case conservatively over-predicts

@@ -16,8 +16,12 @@ export function CommandBlock({ command }: { command: string }) {
   )
 
   async function copy() {
+    // Optional chaining would resolve to `undefined` (not throw) when the Clipboard
+    // API is absent (insecure context / old browser), so guard explicitly — otherwise
+    // we'd announce "Copied ✓" without having copied anything.
+    if (!navigator.clipboard) return
     try {
-      await navigator.clipboard?.writeText(command)
+      await navigator.clipboard.writeText(command)
       setCopied(true)
       if (timer.current !== null) clearTimeout(timer.current)
       timer.current = setTimeout(() => setCopied(false), 1800)
