@@ -19,7 +19,7 @@ import vllm_calc_engine
 from vllm_calc_api import settings
 from vllm_calc_api.errors import register_exception_handlers
 from vllm_calc_api.presets_loader import load_gpu_presets, load_model_presets
-from vllm_calc_api.routes import calculate, meta, presets
+from vllm_calc_api.routes import calculate, meta, presets, validation
 
 __all__ = ["create_app"]
 
@@ -45,7 +45,7 @@ def create_app() -> FastAPI:
         _install_rate_limit(app, settings.rate_limit_per_minute())
 
     register_exception_handlers(app)
-    for router in (meta.router, calculate.router, presets.router):
+    for router in (meta.router, calculate.router, presets.router, validation.router):
         app.include_router(router, prefix="/v1")
 
     # Optionally serve the built SPA from the same container (mounted last so the

@@ -737,3 +737,32 @@ So that I can trust the numbers at the point of use.
 **Then** it computes the pass rate (target ≥90% within ±10%, zero under-predictions on "fits")
 **And** the pass rate and calibrated vLLM version range are published where users can see them
 **And** a failing pass rate is surfaced to maintainers rather than silently ignored.
+
+**Status:** Done (2026-07-13, verified green — GPU CI workflow scaffolded for the self-hosted runner).
+
+**Dev Agent Record (Story 4.4):**
+- **Gate** (from Story 4.3's `summarize`): `gate_passed = pass_rate ≥ 90% AND zero under-predictions on "fits"`. `vllm-calc-validate` exits non-zero when the gate fails.
+- **Publish, honestly:** `report.publish(summary, path)` writes the summary JSON; the harness writes it to `VALIDATION_RESULTS_PATH` (repo-root default). New **`GET /v1/validation`** serves it: **`pending`** (with the calibrated range) until a real GPU run publishes results — never a made-up number — then **`validated`** with pass_rate/gate. The generated `validation-results.json` is gitignored (published via the API, not committed).
+- **At the point of use:** SPA `AccuracyFooter` fetches `/v1/validation` and shows either "X% of cases within ±10% (measured against real vLLM)" or "not yet validated against real vLLM", always with the calibrated vLLM range.
+- **Surfaced to maintainers:** `.github/workflows/validation-gpu.yml` runs on a **self-hosted `[self-hosted, gpu]` runner** — scheduled weekly, on manual dispatch, and on matrix/version changes — runs the harness (non-zero exit fails the job) and uploads the results artifact even on failure. Not runnable in this environment (no GPU); scaffolded + validated by inspection.
+- **Tests:** api `test_validation_endpoint.py` (2: pending when no file, validated when present) + validation `test_report.py::test_publish_writes_readable_summary`; web `AccuracyFooter.test.tsx` (2: validated pass-rate + pending states).
+- **Verify green:** ruff ✓ · mypy (48 files) ✓ · pytest **113/113** ✓ · web eslint/tsc ✓ · vitest **37/37** ✓ · vite build ✓. Live smoke: `/v1/validation` → `pending` with `calibrated_vllm_range: ">=0.13,<0.14"`.
+- **File List:** `packages/validation/src/vllm_calc_validation/{report.py,harness.py,__init__.py}`, `packages/validation/tests/test_report.py`; `packages/api/src/vllm_calc_api/{settings.py,main.py,routes/validation.py}`, `packages/api/tests/test_validation_endpoint.py`; `web/src/api/{types.ts,client.ts}`, `web/src/App.tsx`, `web/src/features/calculator/{AccuracyFooter.tsx,AccuracyFooter.test.tsx}`; `.github/workflows/validation-gpu.yml`, `.gitignore`.
+
+---
+
+## Epic 4 — COMPLETE (2026-07-13)
+All 4 stories done and green. The trust + growth engine: presets are **schema-validated with provenance in CI** (4.1), a documented **data-only contribution path** grows coverage without code changes (4.2), an **accuracy harness** compares predictions to real `vllm serve` reserve with a conservative pass rule (4.3), and the **pass rate is gated + published** at the point of use with a self-hosted GPU CI workflow (4.4). GPU-bound steps (real measurement, the GPU runner) are scaffolded + injected/documented; every portable part is unit-tested. **150 automated tests** (113 Python + 37 web).
+
+---
+
+## Project — ALL 4 EPICS COMPLETE (2026-07-13)
+From a one-line idea to a tested, multi-surface product via the full BMad method:
+**know** the answer (E1: engine + API + SPA, live "will it fit?") → **act** on it
+(E2: runnable command, honest remediation, honesty flags, shareable URLs) → **reach**
+it anywhere (E3: CI-gateable CLI + air-gapped Docker backend) → **prove & grow** it
+(E4: CI preset validation, contribution path, accuracy harness + published pass rate).
+**150 automated tests** (113 Python + 37 web) + live API/CLI smokes; single-engine
+parity (NFR3) held throughout. Known deferred: real GPU calibration of the provisional
+overhead constants (harness ready), Docker image build (needs a container runtime),
+searchable-combobox / per-field-error UI polish.

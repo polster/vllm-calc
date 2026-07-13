@@ -15,7 +15,7 @@ from vllm_calc_validation.harness import (
     predict,
     run_matrix,
 )
-from vllm_calc_validation.report import Summary, summarize
+from vllm_calc_validation.report import Summary, publish, summarize
 
 __all__ = [
     "TOLERANCE_PCT",
@@ -28,4 +28,5 @@ __all__ = [
     "run_matrix",
     "Summary",
     "summarize",
+    "publish",
 ]

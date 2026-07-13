@@ -116,12 +116,20 @@ def measure_reserved_bytes(case: Case) -> int:  # pragma: no cover - requires GP
 
 
 def main() -> int:  # pragma: no cover - entry point for the GPU runner
-    from vllm_calc_validation.report import summarize
+    import os
+
+    from vllm_calc_validation.report import publish, summarize
 
     matrix = load_matrix(Path(__file__).resolve().parents[3] / "matrix.yaml")
     results = run_matrix(matrix, measure_reserved_bytes)
     summary = summarize(results, matrix.vllm_version)
     print(summary.model_dump_json(indent=2))
+
+    # Publish where the API serves it (repo-root default, overridable for CI).
+    repo_root = Path(__file__).resolve().parents[4]
+    out = Path(os.environ.get("VALIDATION_RESULTS_PATH", repo_root / "validation-results.json"))
+    publish(summary, out)
+
     return 0 if summary.gate_passed else 1
 
 

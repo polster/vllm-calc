@@ -2,6 +2,7 @@
 // then the two-region calculator page.
 
 import { ThemeToggle } from './components/ThemeToggle.tsx'
+import { AccuracyFooter } from './features/calculator/AccuracyFooter.tsx'
 import { CalculatorPage } from './features/calculator/CalculatorPage.tsx'
 
 export default function App() {
@@ -14,6 +15,7 @@ export default function App() {
         <ThemeToggle />
       </header>
       <CalculatorPage />
+      <AccuracyFooter />
     </div>
   )
 }

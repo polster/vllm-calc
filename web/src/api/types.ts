@@ -89,6 +89,17 @@ export interface GpuPreset {
   vllm_version_checked: string
 }
 
+/** Published accuracy status (GET /v1/validation). */
+export interface ValidationStatus {
+  status: 'validated' | 'pending'
+  calibrated_vllm_range: string
+  vllm_version?: string | null
+  pass_rate?: number | null
+  passed?: number | null
+  total?: number | null
+  gate_passed?: boolean | null
+}
+
 /** Structured error contract: {error:{type,message,details?}}. */
 export interface ApiErrorBody {
   type: string

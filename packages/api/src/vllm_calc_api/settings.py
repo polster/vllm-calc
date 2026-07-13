@@ -17,6 +17,7 @@ __all__ = [
     "rate_limit_per_minute",
     "vllm_version_range",
     "spa_dir",
+    "validation_results_path",
 ]
 
 # Repo layout: packages/api/src/vllm_calc_api/settings.py → repo root is parents[4].
@@ -53,6 +54,12 @@ def rate_limit_per_minute() -> int:
 def vllm_version_range() -> str:
     """The reported calibrated vLLM range (`VLLM_VERSION_RANGE` overrides the engine's)."""
     return os.environ.get("VLLM_VERSION_RANGE") or SUPPORTED_VLLM_RANGE
+
+
+def validation_results_path() -> Path:
+    """Where the published accuracy summary is read from (`VALIDATION_RESULTS_PATH`)."""
+    override = os.environ.get("VALIDATION_RESULTS_PATH")
+    return Path(override) if override else _DEFAULT_PRESETS_DIR.parent / "validation-results.json"
 
 
 def spa_dir() -> Path | None:

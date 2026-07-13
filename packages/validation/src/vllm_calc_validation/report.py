@@ -1,10 +1,12 @@
 """Aggregate case results into a publishable, gate-able summary (Stories 4.3–4.4)."""
 
+from pathlib import Path
+
 from pydantic import BaseModel
 
 from vllm_calc_validation.harness import CaseResult
 
-__all__ = ["PASS_RATE_TARGET", "Summary", "summarize"]
+__all__ = ["PASS_RATE_TARGET", "Summary", "summarize", "publish"]
 
 # NFR2: at least 90% of cases within ±10%, with zero under-predictions on "fits".
 PASS_RATE_TARGET = 0.90
@@ -37,3 +39,8 @@ def summarize(results: list[CaseResult], vllm_version: str) -> Summary:
         failures=[r.label for r in results if not r.passed],
         gate_passed=rate >= PASS_RATE_TARGET and under == 0,
     )
+
+
+def publish(summary: Summary, path: Path) -> None:
+    """Write the summary as JSON where the API can serve it to users."""
+    path.write_text(summary.model_dump_json(indent=2) + "\n")

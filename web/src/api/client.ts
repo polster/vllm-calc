@@ -2,7 +2,14 @@
  *  (parity invariant) — it only calls the backend. Base URL is configurable so
  *  the same build points at the public API or a local/Docker backend. */
 
-import type { ApiErrorBody, CalcInput, CalcResult, GpuPreset, ModelPreset } from './types.ts'
+import type {
+  ApiErrorBody,
+  CalcInput,
+  CalcResult,
+  GpuPreset,
+  ModelPreset,
+  ValidationStatus,
+} from './types.ts'
 
 const BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? ''
 
@@ -28,6 +35,10 @@ export async function fetchModelPresets(): Promise<ModelPreset[]> {
 
 export async function fetchGpuPresets(): Promise<GpuPreset[]> {
   return getJson<GpuPreset[]>('/v1/presets/gpus')
+}
+
+export async function fetchValidation(): Promise<ValidationStatus> {
+  return getJson<ValidationStatus>('/v1/validation')
 }
 
 /** POST a config to /v1/calculate. Throws ApiError on the structured error contract. */

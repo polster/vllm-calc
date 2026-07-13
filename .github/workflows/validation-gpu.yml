@@ -1,0 +1,35 @@
+name: GPU accuracy validation
+
+# Runs the accuracy harness against real `vllm serve` on a self-hosted GPU runner.
+# Scheduled weekly, on manual dispatch, and when the pinned vLLM version / matrix
+# changes. A failing pass rate FAILS the job (surfaced to maintainers, not silent).
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+  push:
+    paths:
+      - "packages/validation/matrix.yaml"
+      - "packages/validation/**"
+
+jobs:
+  gpu-validate:
+    # Requires a self-hosted runner with NVIDIA GPUs + a matching vLLM install.
+    runs-on: [self-hosted, gpu]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install workspace (locked)
+        run: uv sync --frozen
+      - name: Run accuracy harness (exits non-zero if the gate fails)
+        env:
+          VALIDATION_RESULTS_PATH: ${{ github.workspace }}/validation-results.json
+        run: uv run vllm-calc-validate
+      - name: Publish results artifact
+        if: always() # publish even on a failing gate so maintainers can inspect
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-results
+          path: validation-results.json

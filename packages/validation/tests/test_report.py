@@ -1,7 +1,10 @@
 """Tests for pass-rate aggregation and the CI gate (Stories 4.3–4.4)."""
 
+import json
+from pathlib import Path
+
 from vllm_calc_validation.harness import CaseResult
-from vllm_calc_validation.report import summarize
+from vllm_calc_validation.report import publish, summarize
 
 
 def _result(label: str, *, passed: bool, fits: bool = True, under: bool = False) -> CaseResult:
@@ -39,3 +42,12 @@ def test_any_under_prediction_on_fits_fails_the_gate() -> None:
     s = summarize(results, "0.13.0")
     assert s.under_predictions_on_fits == 1
     assert not s.gate_passed
+
+
+def test_publish_writes_readable_summary(tmp_path: Path) -> None:
+    results = [_result(f"c{i}", passed=True) for i in range(3)]
+    summary = summarize(results, "0.13.0")
+    out = tmp_path / "validation-results.json"
+    publish(summary, out)
+    data = json.loads(out.read_text())
+    assert data["pass_rate"] == 1.0 and data["vllm_version"] == "0.13.0"
