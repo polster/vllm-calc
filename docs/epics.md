@@ -712,6 +712,18 @@ So that accuracy is provable rather than asserted.
 **And** it reports per-case error and flags any under-prediction on a "fits" case as a failure
 **And** its results feed calibration of the overhead constants.
 
+**Status:** Done (2026-07-13, verified green — GPU measurement scaffolded/injected; portable core fully tested).
+
+**Dev Agent Record (Story 4.3):**
+- **New dev-only workspace package `packages/validation`** (`vllm-calc-validation`, deps: engine + pyyaml). Added to the uv workspace; **kept out of the runtime image** by scoping the Dockerfile to `uv sync … --package vllm-calc-api` (verified locally that api-scoped sync installs only api+engine). Old top-level `validation/` stub removed.
+- **Split GPU-bound from portable:** `predict` (engine `used_per_gpu_bytes` + fits), `compare`, `run_matrix`, `summarize` are pure and fully unit-tested; the single GPU step — `measure_reserved_bytes` (launch real `vllm serve`, read reserved VRAM) — is an **injected callable**, so the analysis runs anywhere. The real impl raises with a clear "requires GPU + vLLM" message and is exercised via injection in tests.
+- **Pass rule (NFR1/NFR2):** a case passes at **±10%** AND must not **under-predict a "fits" verdict** (predicted < measured on a fits case fails even within tolerance — that's the dangerous direction). `error_pct` is signed (positive = conservative over-predict).
+- **`matrix.yaml`** pins the vLLM version and lists GPU×model×quant×TP cases as full inline `CalcInput`s (harness needs only the engine). Runnable via the `vllm-calc-validate` script; feeds calibration of the provisional overhead constants (Story 1.4).
+- **Config plumbing:** added `packages/validation/{tests,src}` to pytest `testpaths`/`pythonpath` and to mypy `mypy_path` (the missing entry caused an initial import-untyped / found-twice error — no `py.typed` needed, matching the other three packages).
+- **Tests:** `test_harness.py` (7: over-predict passes, under-predict-on-fits fails even within tolerance, under-predict on no-go can pass, out-of-tolerance fails, injected-measurement matrix run, load+predict without GPU, real measurement requires GPU) + `test_report.py` (3: pass-rate/gate all-pass, gate fails below 90%, any under-prediction-on-fits fails the gate).
+- **Verify green:** ruff ✓ · mypy (46 files) ✓ · pytest **110/110** ✓. Smoke on the real matrix (simulated reserve 4% below prediction) → pass_rate 1.0, gate True, 0 under-predictions.
+- **File List:** `packages/validation/**` (pyproject, `src/vllm_calc_validation/{__init__,harness,report}.py`, `matrix.yaml`, `tests/{test_harness,test_report}.py`, `README.md`), `pyproject.toml` (workspace/pytest/mypy), `docker/Dockerfile`, `uv.lock`.
+
 ### Story 4.4: Gate and publish the validation pass rate
 
 As a user evaluating the tool,

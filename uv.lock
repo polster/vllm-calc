@@ -7,6 +7,7 @@ members = [
     "vllm-calc-api",
     "vllm-calc-cli",
     "vllm-calc-engine",
+    "vllm-calc-validation",
 ]
 
 [manifest.dependency-groups]
@@ -629,3 +630,18 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "pydantic", specifier = ">=2,<3" }]
+
+[[package]]
+name = "vllm-calc-validation"
+version = "0.0.0"
+source = { editable = "packages/validation" }
+dependencies = [
+    { name = "pyyaml" },
+    { name = "vllm-calc-engine" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pyyaml", specifier = ">=6" },
+    { name = "vllm-calc-engine", editable = "packages/engine" },
+]

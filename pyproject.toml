@@ -3,7 +3,7 @@
 # shared dev-tool config. uv.lock (committed) pins the whole graph reproducibly.
 
 [tool.uv.workspace]
-members = ["packages/engine", "packages/api", "packages/cli"]
+members = ["packages/engine", "packages/api", "packages/cli", "packages/validation"]
 
 [tool.uv.sources]
 # api and cli depend on the engine — resolve it from the workspace, never PyPI.
@@ -31,10 +31,20 @@ python_version = "3.13"
 strict = true
 namespace_packages = true
 explicit_package_bases = true
-mypy_path = "packages/engine/src:packages/api/src:packages/cli/src"
+mypy_path = "packages/engine/src:packages/api/src:packages/cli/src:packages/validation/src"
 exclude = ['/\.venv/', '/build/', '/dist/', '/node_modules/', '^web/']
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib"
-testpaths = ["packages/engine/tests", "packages/api/tests", "packages/cli/tests"]
-pythonpath = ["packages/engine/src", "packages/api/src", "packages/cli/src"]
+testpaths = [
+    "packages/engine/tests",
+    "packages/api/tests",
+    "packages/cli/tests",
+    "packages/validation/tests",
+]
+pythonpath = [
+    "packages/engine/src",
+    "packages/api/src",
+    "packages/cli/src",
+    "packages/validation/src",
+]

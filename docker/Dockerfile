@@ -16,10 +16,11 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 COPY packages/ ./packages/
 
-# Install engine + API (+ cli) into /app/.venv as real wheels (no editable installs),
-# excluding dev tooling. --frozen fails if the lockfile is stale.
+# Install ONLY the API (+ its engine dep) into /app/.venv as real wheels (no editable
+# installs), excluding dev tooling. Scoping to the api package keeps the cli and the
+# GPU validation harness out of the runtime image. --frozen fails if the lock is stale.
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-editable
+    uv sync --frozen --no-dev --no-editable --package vllm-calc-api
 
 
 FROM python:3.13-slim-bookworm AS runtime
