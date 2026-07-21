@@ -1,0 +1,13 @@
+id: deepseek-v3
+name: DeepSeek-V3
+total_params: 671000000000
+layers: 61
+attention_heads: 128
+kv_heads: 128
+head_dim: 192
+hidden_size: 7168
+is_moe: true
+attention_type: mla
+source: https://huggingface.co/deepseek-ai/DeepSeek-V3
+last_verified: "2026-07-21"
+vllm_version_checked: "0.13"

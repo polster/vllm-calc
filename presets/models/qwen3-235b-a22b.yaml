@@ -1,0 +1,13 @@
+id: qwen3-235b-a22b
+name: Qwen3 235B-A22B
+total_params: 235093634560
+layers: 94
+attention_heads: 64
+kv_heads: 4
+head_dim: 128
+hidden_size: 4096
+is_moe: true
+attention_type: standard
+source: https://huggingface.co/Qwen/Qwen3-235B-A22B
+last_verified: "2026-07-21"
+vllm_version_checked: "0.13"

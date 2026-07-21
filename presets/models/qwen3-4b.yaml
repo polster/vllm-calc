@@ -1,0 +1,13 @@
+id: qwen3-4b
+name: Qwen3 4B
+total_params: 4022468096
+layers: 36
+attention_heads: 32
+kv_heads: 8
+head_dim: 128
+hidden_size: 2560
+is_moe: false
+attention_type: standard
+source: https://huggingface.co/Qwen/Qwen3-4B
+last_verified: "2026-07-21"
+vllm_version_checked: "0.13"

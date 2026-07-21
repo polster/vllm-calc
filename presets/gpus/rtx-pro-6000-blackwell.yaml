@@ -1,0 +1,6 @@
+id: rtx-pro-6000-blackwell
+name: NVIDIA RTX PRO 6000 Blackwell
+vram_gib: 96
+source: https://www.nvidia.com/en-us/products/workstations/professional-desktop-gpus/rtx-pro-6000/
+last_verified: "2026-07-21"
+vllm_version_checked: "0.13"

@@ -1,0 +1,6 @@
+id: rtx-pro-5000-blackwell-72gb
+name: NVIDIA RTX PRO 5000 Blackwell 72GB
+vram_gib: 72
+source: https://www.nvidia.com/en-us/products/workstations/professional-desktop-gpus/rtx-pro-5000/
+last_verified: "2026-07-21"
+vllm_version_checked: "0.13"
