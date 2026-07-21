@@ -5,9 +5,6 @@ quantization, a context length, and a tensor-parallel size — and find out, bef
 you launch anything, whether it fits, how many concurrent requests it serves, and
 the exact `vllm serve` command to run it.
 
-> Status: **scaffold** (Story 1.1). Calculation engine and surfaces are built in
-> subsequent stories — see [docs/epics.md](docs/epics.md).
-
 ## Repository layout
 
 ```
@@ -23,18 +20,7 @@ docker/     # backend image + local run
 
 ## Development
 
-Prerequisites: [uv](https://docs.astral.sh/uv/) and Node 20.19+/22.12+ (this repo was
-scaffolded with Python 3.14 and Node 25). Python is a **uv workspace**; the web side uses
-**npm** (see [CONTRIBUTING.md](CONTRIBUTING.md) for the divergence from the architecture's
-pnpm suggestion).
-
-```bash
-# Python: sync the whole workspace from the lockfile (creates .venv, installs all packages + dev tools)
-uv sync
-
-# Web
-cd web && npm install
-```
+See [CONTRIBUTION.md]() for more details.
 
 ### Quality gates (what CI runs)
 

@@ -10,7 +10,12 @@ WEB := web
 .PHONY: help setup setup-python setup-node \
         check check-python check-web \
         hooks-install hooks-uninstall hooks-run \
-        lint test dev presets clean
+        lint test dev backend frontend presets clean
+
+# Local demo defaults — the SPA and API run as separate origins, so CORS on the
+# backend must allow the Vite dev server. Override on the command line if needed.
+API_PORT := 8000
+WEB_ORIGIN := http://localhost:5173
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -65,6 +70,12 @@ lint: ## Lint Python + web
 test: ## Test Python + web
 	uv run pytest
 	cd $(WEB) && npm test
+
+backend: ## Start the API (FastAPI/uvicorn, hot-reload) on port 8000
+	CORS_ORIGINS=$(WEB_ORIGIN) uv run uvicorn vllm_calc_api.main:app --port $(API_PORT) --reload
+
+frontend: ## Start the web dev server (vite), pointed at the local API
+	cd $(WEB) && VITE_API_BASE_URL=http://localhost:$(API_PORT) npm run dev
 
 dev: ## Start the web dev server (vite)
 	cd $(WEB) && npm run dev

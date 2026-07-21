@@ -31,15 +31,15 @@ different runner). Reproducibility comes from the committed `uv.lock` and `web/p
 ## Local development
 
 ```bash
-# Python — one command sets up the whole workspace from the lockfile
-uv sync
+# Run the following command to setup Python workspace and Node
+make setup
 
-# Web
-cd web && npm install
+# Start the backend and frontend in separate terminals
+make backend
+make frontend
+
+# Call the frontend URL in your browser
 ```
-
-Or just run `make setup` to do both at once (and install the git pre-commit
-hooks). Run `make help` to see all targets.
 
 ### Pre-commit hooks
 
