@@ -1,0 +1,13 @@
+id: gemma-3-1b
+name: Gemma 3 1B
+total_params: 999885952
+layers: 26
+attention_heads: 4
+kv_heads: 1
+head_dim: 256
+hidden_size: 1152
+is_moe: false
+attention_type: sliding_window
+source: https://huggingface.co/google/gemma-3-1b-it
+last_verified: "2026-07-21"
+vllm_version_checked: "0.13"

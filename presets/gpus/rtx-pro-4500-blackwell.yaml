@@ -1,0 +1,6 @@
+id: rtx-pro-4500-blackwell
+name: NVIDIA RTX PRO 4500 Blackwell
+vram_gib: 32
+source: https://www.nvidia.com/en-us/products/workstations/professional-desktop-gpus/rtx-pro-4500/
+last_verified: "2026-07-21"
+vllm_version_checked: "0.13"

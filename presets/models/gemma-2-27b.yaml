@@ -1,0 +1,13 @@
+id: gemma-2-27b
+name: Gemma 2 27B
+total_params: 27227128320
+layers: 46
+attention_heads: 32
+kv_heads: 16
+head_dim: 128
+hidden_size: 4608
+is_moe: false
+attention_type: sliding_window
+source: https://huggingface.co/google/gemma-2-27b
+last_verified: "2026-07-21"
+vllm_version_checked: "0.13"
