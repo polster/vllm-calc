@@ -1,0 +1,37 @@
+# Pre-commit hooks for vllm-calc.
+#
+# Fast, commit-time gates only: hygiene + ruff (Python) + eslint (web). The
+# Python/web tools are the project's own pinned versions (run via uv / npm), so
+# these hooks match CI (.github/workflows/ci.yml) rather than drifting to a
+# separate pinned copy. The slower CI checks — mypy, pytest, build, preset
+# validation — are intentionally left to `make check` and CI, not every commit.
+#
+# Install:   make hooks-install     (or: uv run pre-commit install)
+# Run all:   make hooks-run         (or: uv run pre-commit run --all-files)
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff (lint + autofix)
+        entry: uv run ruff check --fix --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+
+      - id: eslint-web
+        name: eslint (web)
+        entry: bash -c 'cd web && npm run --silent lint'
+        language: system
+        files: ^web/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: false

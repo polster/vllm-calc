@@ -38,12 +38,32 @@ uv sync
 cd web && npm install
 ```
 
+Or just run `make setup` to do both at once (and install the git pre-commit
+hooks). Run `make help` to see all targets.
+
+### Pre-commit hooks
+
+`make setup` installs pre-commit hooks that run fast, commit-time gates: file
+hygiene, `ruff` (lint + autofix) on Python, and `eslint` on web changes. They use
+the project's own pinned tools, so they match CI. Manage them with:
+
+```bash
+make hooks-install     # enable the git hooks (done by `make setup`)
+make hooks-run         # run every hook against all files
+make hooks-uninstall   # disable the git hooks
+```
+
+The slower checks (mypy, pytest, build, preset validation) are left to `make check`
+and CI, not every commit.
+
 ## Before you push (what CI enforces)
 
 ```bash
 uv run ruff check . && uv run mypy . && uv run pytest        # Python
 cd web && npm run lint && npm run typecheck && npm test && npm run build   # Web
 ```
+
+Or run `make check`, which mirrors CI exactly.
 
 New engine behavior ships with **golden-value tests**. New surfaces must produce
 **identical** results to the engine for identical inputs.
