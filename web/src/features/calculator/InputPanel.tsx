@@ -1,13 +1,16 @@
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { type ReactNode, useId, useState } from 'react'
+import { type ReactNode, useId } from 'react'
 
 import type { CalcInput, GpuPreset, ModelPreset } from '../../api/types.ts'
+import type { UiSelection } from './defaults.ts'
 import { FieldTooltip } from './FieldTooltip.tsx'
 import { FIELD_HELP, PICKER_HELP } from './fieldHelp.ts'
 
 interface Props {
   input: CalcInput
   setInput: (patch: Partial<CalcInput>) => void
+  selection: UiSelection
+  setSelection: (patch: Partial<UiSelection>) => void
   modelPresets: ModelPreset[]
   gpuPresets: GpuPreset[]
 }
@@ -70,9 +73,24 @@ function Group(props: { legend: string; children: ReactNode }) {
   )
 }
 
-export function InputPanel({ input, setInput, modelPresets, gpuPresets }: Props) {
-  const [modelId, setModelId] = useState('')
-  const [gpuId, setGpuId] = useState('')
+export function InputPanel({
+  input,
+  setInput,
+  selection,
+  setSelection,
+  modelPresets,
+  gpuPresets,
+}: Props) {
+  const { modelPresetId, gpuPresetId } = selection
+  const selectedModel = modelPresets.find((m) => m.id === modelPresetId)
+  const selectedGpu = gpuPresets.find((g) => g.id === gpuPresetId)
+
+  // The persisted selection can name a preset that isn't in the (async-loaded)
+  // list yet, or at all (a stale shared link). Bind the control to a value that
+  // actually has an <option> so it degrades to the placeholder instead of
+  // rendering blank with a value that matches nothing.
+  const modelValue = selectedModel || modelPresetId === 'custom' ? modelPresetId : ''
+  const gpuValue = selectedGpu || gpuPresetId === 'custom' ? gpuPresetId : ''
 
   const modelPresetFieldId = useId()
   const quantFieldId = useId()
@@ -80,7 +98,7 @@ export function InputPanel({ input, setInput, modelPresets, gpuPresets }: Props)
   const kvDtypeFieldId = useId()
 
   function selectModel(id: string) {
-    setModelId(id)
+    setSelection({ modelPresetId: id })
     if (id === 'custom') {
       setInput({ model_ref: null }) // custom model → command shows the placeholder
       return
@@ -100,14 +118,15 @@ export function InputPanel({ input, setInput, modelPresets, gpuPresets }: Props)
   }
 
   function selectGpu(id: string) {
-    setGpuId(id)
+    setSelection({ gpuPresetId: id })
     const g = gpuPresets.find((x) => x.id === id)
     if (g) setInput({ gpu_vram_gib: g.vram_gib })
   }
 
-  const fromPreset = modelId && modelId !== 'custom'
-  const selectedPurpose =
-    fromPreset ? modelPresets.find((m) => m.id === modelId)?.purpose : undefined
+  // Only treat it as "from a preset" when the preset actually resolves — a
+  // loading/unknown id must not claim the architecture came from a preset.
+  const fromPreset = Boolean(selectedModel)
+  const selectedPurpose = selectedModel?.purpose
 
   return (
     <Tooltip.Provider delayDuration={200}>
@@ -119,7 +138,7 @@ export function InputPanel({ input, setInput, modelPresets, gpuPresets }: Props)
               id={modelPresetFieldId}
               aria-label="Model preset"
               className={fieldCls}
-              value={modelId}
+              value={modelValue}
               onChange={(e) => selectModel(e.target.value)}
             >
               <option value="">— choose a model —</option>
@@ -204,7 +223,7 @@ export function InputPanel({ input, setInput, modelPresets, gpuPresets }: Props)
               id={gpuPresetFieldId}
               aria-label="GPU preset"
               className={fieldCls}
-              value={gpuId}
+              value={gpuValue}
               onChange={(e) => selectGpu(e.target.value)}
             >
               <option value="">— choose a GPU —</option>

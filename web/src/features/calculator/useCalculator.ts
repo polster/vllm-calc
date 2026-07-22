@@ -6,7 +6,8 @@ import {
   postCalculate,
 } from '../../api/client.ts'
 import type { CalcInput, CalcResult, GpuPreset, ModelPreset } from '../../api/types.ts'
-import { decodeInput, encodeInput } from './urlState.ts'
+import type { UiSelection } from './defaults.ts'
+import { decodeState, encodeState } from './urlState.ts'
 
 export type Status = 'loading' | 'ready' | 'error'
 
@@ -31,10 +32,13 @@ export function useCalculator(deps: CalculatorDeps = DEFAULT_DEPS) {
   const { calculate, fetchModels, fetchGpus } = deps
 
   // Seed from the URL so a shared/refreshed scenario is restored (UX-DR8);
-  // an empty query yields the default scenario.
-  const [input, setInputState] = useState<CalcInput>(() =>
-    decodeInput(typeof window === 'undefined' ? '' : window.location.search),
+  // an empty query yields the default scenario and its preset selection.
+  // Decoded once (lazy initializer), not on every render.
+  const [initial] = useState(() =>
+    decodeState(typeof window === 'undefined' ? '' : window.location.search),
   )
+  const [input, setInputState] = useState<CalcInput>(initial.input)
+  const [selection, setSelectionState] = useState<UiSelection>(initial.selection)
   const [result, setResult] = useState<CalcResult | null>(null)
   const [status, setStatus] = useState<Status>('loading')
   const [error, setError] = useState<string | null>(null)
@@ -52,9 +56,13 @@ export function useCalculator(deps: CalculatorDeps = DEFAULT_DEPS) {
     }
   }, [fetchModels, fetchGpus])
 
-  // Restore the scenario on browser back/forward.
+  // Restore the scenario and its dropdown selection on browser back/forward.
   useEffect(() => {
-    const onPop = () => setInputState(decodeInput(window.location.search))
+    const onPop = () => {
+      const s = decodeState(window.location.search)
+      setInputState(s.input)
+      setSelectionState(s.selection)
+    }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
@@ -63,9 +71,6 @@ export function useCalculator(deps: CalculatorDeps = DEFAULT_DEPS) {
     setStatus('loading')
     const requestId = ++seq.current
     const handle = setTimeout(() => {
-      // Keep the URL in sync (debounced with the recompute); replaceState avoids
-      // flooding history on every keystroke while keeping the URL copy-shareable.
-      window.history.replaceState(null, '', `${window.location.pathname}?${encodeInput(input)}`)
       calculate(input)
         .then((r) => {
           if (requestId !== seq.current) return // stale response, drop
@@ -82,9 +87,37 @@ export function useCalculator(deps: CalculatorDeps = DEFAULT_DEPS) {
     return () => clearTimeout(handle)
   }, [input, calculate])
 
+  // Keep the URL in sync with the scenario AND the dropdown selection (a GPU
+  // pick sharing another preset's VRAM changes only `selection`); replaceState
+  // (debounced) avoids flooding history while keeping the URL copy-shareable.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      window.history.replaceState(
+        null,
+        '',
+        `${window.location.pathname}?${encodeState(input, selection)}`,
+      )
+    }, DEBOUNCE_MS)
+    return () => clearTimeout(handle)
+  }, [input, selection])
+
   function setInput(patch: Partial<CalcInput>): void {
     setInputState((prev) => ({ ...prev, ...patch }))
   }
 
-  return { input, setInput, result, status, error, modelPresets, gpuPresets }
+  function setSelection(patch: Partial<UiSelection>): void {
+    setSelectionState((prev) => ({ ...prev, ...patch }))
+  }
+
+  return {
+    input,
+    setInput,
+    selection,
+    setSelection,
+    result,
+    status,
+    error,
+    modelPresets,
+    gpuPresets,
+  }
 }

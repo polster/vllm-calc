@@ -5,7 +5,8 @@ import { useCalculator } from './useCalculator.ts'
 /** The two-region calculator: inputs drive a debounced live recompute; the
  *  result region shows the verdict + breakdown. */
 export function CalculatorPage() {
-  const { input, setInput, result, status, error, modelPresets, gpuPresets } = useCalculator()
+  const { input, setInput, selection, setSelection, result, status, error, modelPresets, gpuPresets } =
+    useCalculator()
 
   return (
     <main className="grid flex-1 gap-6 p-6 lg:grid-cols-[minmax(320px,420px)_1fr]">
@@ -17,6 +18,8 @@ export function CalculatorPage() {
         <InputPanel
           input={input}
           setInput={setInput}
+          selection={selection}
+          setSelection={setSelection}
           modelPresets={modelPresets}
           gpuPresets={gpuPresets}
         />
