@@ -7,29 +7,42 @@ version-controlled presets baked into the image.
 
 ## Files
 
-- `Dockerfile` — multi-stage build (uv). The engine + API are installed
-  non-editably into a self-contained venv, so the runtime image carries no source
-  tree and no dev tooling. Runs as a non-root user with a `/v1/health` healthcheck.
-- `docker-compose.yml` — local run convenience.
+- `Dockerfile` — backend image. Multi-stage build (uv). The engine + API are
+  installed non-editably into a self-contained venv, so the runtime image carries
+  no source tree and no dev tooling. Runs as a non-root user with a `/v1/health`
+  healthcheck.
+- `docker-compose.yml` — full-stack local run: `backend` + `frontend` services.
+- The frontend image is defined next to the SPA in [`../web/Dockerfile`](../web/Dockerfile)
+  (with its own `nginx.conf`): a Node build stage runs `npm run build`, and nginx
+  serves the static bundle while reverse-proxying `/v1/*` to the `backend` service.
+  Serving both through one origin means the SPA needs no CORS config.
 
 ## Build & run
+
+### Full stack (backend + frontend)
+
+```sh
+make docker-up          # builds both images and runs the stack
+# equivalent to:
+docker compose -f docker/docker-compose.yml up --build
+```
+
+Then open the SPA at **http://localhost:5173** — nginx proxies its API calls to the
+backend, so it's a single origin. The API is also exposed directly on
+**http://localhost:8000** for the CLI:
+
+```sh
+vllm-calc check --api-url http://localhost:8000 --model llama-3.3-70b --gpu a100-80gb:2 --tp 2
+```
+
+Tear it down with `make docker-down`.
+
+### Backend image only
 
 ```sh
 # From the repo root (build context = repo root):
 docker build -f docker/Dockerfile -t vllm-calc-backend .
 docker run --rm -p 8000:8000 vllm-calc-backend
-
-# or:
-docker compose -f docker/docker-compose.yml up --build
-```
-
-Then point either surface at it:
-
-```sh
-# SPA
-VITE_API_BASE_URL=http://localhost:8000 npm --prefix web run dev
-# CLI
-vllm-calc check --api-url http://localhost:8000 --model llama-3.3-70b --gpu a100-80gb:2 --tp 2
 ```
 
 ## Configuration (all via environment variables)

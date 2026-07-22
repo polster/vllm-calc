@@ -10,7 +10,8 @@ WEB := web
 .PHONY: help setup setup-python setup-node \
         check check-python check-web \
         hooks-install hooks-uninstall hooks-run \
-        lint test dev backend frontend presets clean
+        lint test dev backend frontend presets clean \
+        compose-up compose-down
 
 # Local demo defaults — the SPA and API run as separate origins, so CORS on the
 # backend must allow the Vite dev server. Override on the command line if needed.
@@ -82,6 +83,22 @@ dev: ## Start the web dev server (vite)
 
 presets: ## Validate presets (schema + provenance) — same check as CI
 	uv run python -m vllm_calc_api.preset_validation
+
+# --- Docker (full stack: backend + frontend) -----------------------------------
+
+COMPOSE := docker compose -f docker/docker-compose.yml
+
+compose-up: ## Build & run the full stack in Docker (SPA on :5173, API on :8000)
+	$(COMPOSE) up -d --build
+
+compose-down: ## Stop and remove the Docker stack
+	$(COMPOSE) down
+
+compose-logs: ## Show the logs of the Docker stack
+	$(COMPOSE) logs -f
+
+compose-ps: ## Show the running containers of the Docker stack
+	$(COMPOSE) ps
 
 clean: ## Remove tool caches and web build artifacts
 	rm -rf .mypy_cache .pytest_cache .ruff_cache
