@@ -103,4 +103,51 @@ describe('useCalculator', () => {
     act(() => result.current.setInput({ ctx_len: 4096 }))
     await waitFor(() => expect(window.location.search).toContain('ctx_len=4096'))
   })
+
+  it('defaults the preset selection to the default scenario on an empty URL', () => {
+    const { result } = renderHook(() => useCalculator(makeDeps()))
+    expect(result.current.selection).toEqual({
+      modelPresetId: 'llama-3.3-70b',
+      gpuPresetId: 'a100-80gb',
+    })
+  })
+
+  it('seeds the preset selection from the URL on mount', () => {
+    window.history.replaceState(null, '', '/?ctx_len=1234&model_preset=qwen2.5-7b&gpu_preset=h100-80gb')
+    const { result } = renderHook(() => useCalculator(makeDeps()))
+    expect(result.current.selection).toEqual({
+      modelPresetId: 'qwen2.5-7b',
+      gpuPresetId: 'h100-80gb',
+    })
+  })
+
+  it('reflects selection changes in the URL (shareable)', async () => {
+    const deps = makeDeps()
+    const { result } = renderHook(() => useCalculator(deps))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+
+    act(() => result.current.setSelection({ gpuPresetId: 'h100-80gb' }))
+    await waitFor(() => expect(window.location.search).toContain('gpu_preset=h100-80gb'))
+  })
+
+  it('restores both the scenario and the selection on back/forward (popstate)', async () => {
+    const deps = makeDeps()
+    const { result } = renderHook(() => useCalculator(deps))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+
+    act(() => {
+      window.history.replaceState(
+        null,
+        '',
+        '/?ctx_len=2048&model_preset=qwen2.5-7b&gpu_preset=h100-80gb',
+      )
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+
+    expect(result.current.input.ctx_len).toBe(2048)
+    expect(result.current.selection).toEqual({
+      modelPresetId: 'qwen2.5-7b',
+      gpuPresetId: 'h100-80gb',
+    })
+  })
 })

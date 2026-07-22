@@ -23,3 +23,19 @@ export const DEFAULT_INPUT: CalcInput = {
   enforce_eager: false,
   max_num_seqs_cap: 256,
 }
+
+/** UI-only preset selection, kept out of the engine wire contract. `''` means
+ *  no preset (the "— choose … —" placeholder); `'custom'` is an explicit custom
+ *  pick; otherwise a preset id. Persisted in the URL so a shared/refreshed
+ *  scenario shows the same dropdown selection it came from. */
+export interface UiSelection {
+  modelPresetId: string
+  gpuPresetId: string
+}
+
+/** The preset selection matching DEFAULT_INPUT — keep the two in sync:
+ *  Llama-3.3-70B (llama-3.3-70b) on an A100 80GB (a100-80gb). */
+export const DEFAULT_SELECTION: UiSelection = {
+  modelPresetId: 'llama-3.3-70b',
+  gpuPresetId: 'a100-80gb',
+}
