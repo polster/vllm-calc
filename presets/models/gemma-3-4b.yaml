@@ -1,5 +1,6 @@
 id: gemma-3-4b
 name: Gemma 3 4B
+purpose: "Compact multimodal chat for constrained GPUs"
 total_params: 4300000000
 layers: 34
 attention_heads: 8

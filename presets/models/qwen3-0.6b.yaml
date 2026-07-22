@@ -1,5 +1,6 @@
 id: qwen3-0.6b
 name: Qwen3 0.6B
+purpose: "Tiny edge model with optional reasoning mode"
 total_params: 751632384
 layers: 28
 attention_heads: 16

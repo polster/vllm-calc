@@ -1,5 +1,6 @@
 id: glm-4.6
 name: GLM-4.6
+purpose: "Long-context agentic coding and tool calling"
 total_params: 356785898816
 layers: 92
 attention_heads: 96

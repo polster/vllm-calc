@@ -37,6 +37,23 @@ def test_moe_flag_present() -> None:
     assert load_model_presets(MODELS_DIR)["mixtral-8x7b"].is_moe is True
 
 
+def test_curated_model_presets_carry_a_purpose() -> None:
+    # Story 4.4: every shipped model preset advertises what it's good for.
+    for m in load_model_presets(MODELS_DIR).values():
+        assert m.purpose and m.purpose.strip(), f"{m.id} is missing a purpose one-liner"
+
+
+def test_purpose_is_optional_and_defaults_to_none() -> None:
+    # A preset without a purpose must still be valid (backward compatible).
+    from vllm_calc_engine.models import ModelPreset
+
+    m = ModelPreset(
+        id="x", name="X", total_params=1, layers=1, attention_heads=1, kv_heads=1,
+        head_dim=1, hidden_size=1, source="s", last_verified="d", vllm_version_checked="0.13",
+    )
+    assert m.purpose is None
+
+
 def test_all_presets_carry_provenance() -> None:
     for p in {**load_model_presets(MODELS_DIR), **load_gpu_presets(GPUS_DIR)}.values():
         assert p.source and p.last_verified

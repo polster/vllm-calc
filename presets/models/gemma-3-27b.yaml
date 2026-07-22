@@ -1,5 +1,6 @@
 id: gemma-3-27b
 name: Gemma 3 27B
+purpose: "Multimodal, long-context general assistant"
 total_params: 27400000000
 layers: 62
 attention_heads: 32

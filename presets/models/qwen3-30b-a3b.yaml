@@ -1,5 +1,6 @@
 id: qwen3-30b-a3b
 name: Qwen3 30B-A3B
+purpose: "Efficient MoE for agentic coding and reasoning"
 total_params: 30532122624
 layers: 48
 attention_heads: 32

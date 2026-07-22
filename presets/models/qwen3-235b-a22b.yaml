@@ -1,5 +1,6 @@
 id: qwen3-235b-a22b
 name: Qwen3 235B-A22B
+purpose: "Flagship MoE for reasoning and agentic tasks"
 total_params: 235093634560
 layers: 94
 attention_heads: 64

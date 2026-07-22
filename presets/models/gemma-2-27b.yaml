@@ -1,5 +1,6 @@
 id: gemma-2-27b
 name: Gemma 2 27B
+purpose: "Well-rounded general chat and instruction following"
 total_params: 27227128320
 layers: 46
 attention_heads: 32

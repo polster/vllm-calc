@@ -1,5 +1,6 @@
 id: gemma-3-12b
 name: Gemma 3 12B
+purpose: "Multimodal chat with strong multilingual support"
 total_params: 12200000000
 layers: 48
 attention_heads: 16

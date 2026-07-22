@@ -67,6 +67,7 @@ export interface CalcResult {
 export interface ModelPreset {
   id: string
   name: string
+  purpose?: string | null
   total_params: number
   layers: number
   attention_heads: number

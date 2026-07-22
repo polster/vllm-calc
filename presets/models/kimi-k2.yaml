@@ -1,5 +1,6 @@
 id: kimi-k2
 name: Kimi K2
+purpose: "Large-scale MoE for agentic coding and tool use"
 total_params: 1040000000000
 layers: 61
 attention_heads: 64

@@ -1,5 +1,6 @@
 id: qwen3-32b
 name: Qwen3 32B
+purpose: "Dense flagship for reasoning and coding"
 total_params: 32762123264
 layers: 64
 attention_heads: 64

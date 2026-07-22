@@ -1,5 +1,6 @@
 id: gemma-2-9b
 name: Gemma 2 9B
+purpose: "Efficient general-purpose chat on a single GPU"
 total_params: 9241705984
 layers: 42
 attention_heads: 16
