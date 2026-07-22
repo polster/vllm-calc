@@ -30,7 +30,7 @@ export const FIELD_HELP = {
   ctx_len:
     'Maximum sequence length (tokens) each request may use. The KV cache grows linearly with it.',
   max_seqs:
-    'Concurrent sequences you want to serve. "Fits" means this is at most the GPU’s supported capacity.',
+    'Requests you expect generating at the same time (in-flight sequences) — not total users; idle users don’t count. "Fits" means this is at most the GPU’s supported capacity.',
   gpu_memory_utilization:
     'Fraction of each GPU’s VRAM that vLLM may use (default 0.9). The rest is left as headroom.',
   kv_dtype:
