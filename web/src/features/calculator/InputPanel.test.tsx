@@ -50,4 +50,23 @@ describe('InputPanel', () => {
     fireEvent.click(screen.getByRole('checkbox'))
     expect(setInput).toHaveBeenCalledWith({ enforce_eager: true })
   })
+
+  it('renders an accessible info tooltip trigger per field', () => {
+    render(
+      <InputPanel input={DEFAULT_INPUT} setInput={vi.fn()} modelPresets={[]} gpuPresets={[]} />,
+    )
+    // Representative triggers across a number field, a select, and the checkbox lever.
+    expect(screen.getByRole('button', { name: 'About Context length' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'About Quantization' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'About enforce_eager' })).toBeInTheDocument()
+  })
+
+  it('keeps each input’s accessible name equal to its label', () => {
+    render(
+      <InputPanel input={DEFAULT_INPUT} setInput={vi.fn()} modelPresets={[]} gpuPresets={[]} />,
+    )
+    // The tooltip trigger must not pollute the control's accessible name.
+    expect(screen.getByLabelText('Context length').tagName).toBe('INPUT')
+    expect(screen.getByLabelText('Quantization').tagName).toBe('SELECT')
+  })
 })
