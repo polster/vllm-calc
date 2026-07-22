@@ -766,3 +766,29 @@ it anywhere (E3: CI-gateable CLI + air-gapped Docker backend) → **prove & grow
 parity (NFR3) held throughout. Known deferred: real GPU calibration of the provisional
 overhead constants (harness ready), Docker image build (needs a container runtime),
 searchable-combobox / per-field-error UI polish.
+
+---
+
+## Post-v1 Enhancements
+
+Additive stories that reopened a completed epic. Story spec lives in `docs/stories/`.
+(Note: the "(4.4)" in the Epic 4 completion note above is informal prose for the
+gate+publish work recorded under Story 4.3; the Story 4.4 below is the first standalone
+post-completion story.)
+
+### Story 4.4: Add a purpose one-liner to model presets
+
+As a user choosing a model, I want each preset to carry a short "what it's good for" line,
+so I can quickly tell which model fits my use case (agentic coding, long-context, general
+chat, …) without leaving the tool. Extends Epic 4's preset schema + contribution theme.
+
+**Status:** Review (2026-07-22).
+
+**Dev Agent Record (Story 4.4):**
+- **Additive, backward-compatible schema change:** optional `purpose: str | None = None` on the engine's `ModelPreset` (not on `_Provenance`). No engine calc, endpoint, or loader change — the field rides existing Pydantic serialization to API/SPA/CLI (the Epic 4 data-only guarantee). Regenerated `presets/schema/model.schema.json` via `write_schemas`; `gpu.schema.json` byte-unchanged.
+- **Data:** authored a one-line `purpose` for **all 30** `presets/models/*.yaml` (inserted after `name:`), each grounded in the model's documented strengths (agentic coding / reasoning / long-context / general chat / multilingual / lightweight-edge / MoE-efficiency). Wording is editorial and best-effort — flagged for a maintainer review pass.
+- **SPA:** `purpose?: string | null` on the web `ModelPreset`; shown as a `--muted` caption above the "◆ architecture from preset" line in `InputPanel`, hidden for custom models and presets without a purpose (no layout shift). `<option>` labels stay name-only to keep the native `<select>` scannable/accessible (UX-DR13).
+- **Docs:** `CONTRIBUTING.md` model template documents `purpose` as optional with "one line, don't overclaim" guidance.
+- **Tests:** loader asserts every curated preset carries a non-empty `purpose` (AC4 guardrail) and that a preset without one defaults to `None`; web test asserts the caption shows on select and hides for custom (QWEN fixture given a `purpose`).
+- **Verify green:** ruff ✓ · mypy (48 files) ✓ · pytest **118** ✓ · web eslint/tsc ✓ · vitest **42** ✓ · vite build ✓ · validator "30 model + 11 GPU presets valid (0 warnings)".
+- **File List:** `packages/engine/src/vllm_calc_engine/models.py`; `presets/schema/model.schema.json`; `presets/models/*.yaml` (30); `web/src/api/types.ts`, `web/src/features/calculator/InputPanel.tsx`; `CONTRIBUTING.md`; `packages/api/tests/test_presets_loader.py`, `web/src/features/calculator/InputPanel.test.tsx`.

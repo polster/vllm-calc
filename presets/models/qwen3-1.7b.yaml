@@ -1,5 +1,6 @@
 id: qwen3-1.7b
 name: Qwen3 1.7B
+purpose: "Compact model with hybrid thinking mode"
 total_params: 2031739904
 layers: 28
 attention_heads: 16

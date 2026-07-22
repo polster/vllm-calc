@@ -1,5 +1,6 @@
 id: llama-3.3-70b
 name: Llama 3.3 70B
+purpose: "70B-class quality for general chat and RAG"
 total_params: 70600000000
 layers: 80
 attention_heads: 64

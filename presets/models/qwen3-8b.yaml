@@ -1,5 +1,6 @@
 id: qwen3-8b
 name: Qwen3 8B
+purpose: "Versatile 8B with hybrid thinking mode"
 total_params: 8190735360
 layers: 36
 attention_heads: 32

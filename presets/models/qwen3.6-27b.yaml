@@ -1,5 +1,6 @@
 id: qwen3.6-27b
 name: Qwen3.6 27B
+purpose: "Modern 27B for reasoning, coding, and agentic use"
 total_params: 27781427952
 layers: 64
 attention_heads: 24

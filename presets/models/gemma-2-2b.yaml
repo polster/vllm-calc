@@ -1,5 +1,6 @@
 id: gemma-2-2b
 name: Gemma 2 2B
+purpose: "Lightweight on-device chat and drafting"
 total_params: 2614341888
 layers: 26
 attention_heads: 8

@@ -1,5 +1,6 @@
 id: deepseek-v3
 name: DeepSeek-V3
+purpose: "Frontier-class reasoning and coding at MoE efficiency"
 total_params: 671000000000
 layers: 61
 attention_heads: 128

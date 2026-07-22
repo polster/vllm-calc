@@ -37,6 +37,10 @@ class ModelPreset(_Provenance):
 
     id: str
     name: str
+    purpose: str | None = Field(
+        default=None,
+        description="One-line summary of what the model is best for (use-case sweet spot).",
+    )
     total_params: int = Field(gt=0, description="Total params (MoE: all experts).")
     layers: int = Field(gt=0)
     attention_heads: int = Field(gt=0)

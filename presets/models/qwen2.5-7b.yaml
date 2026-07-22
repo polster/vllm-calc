@@ -1,5 +1,6 @@
 id: qwen2.5-7b
 name: Qwen2.5 7B
+purpose: "Capable small model for coding and math"
 total_params: 7610000000
 layers: 28
 attention_heads: 28

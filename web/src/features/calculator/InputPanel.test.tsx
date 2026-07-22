@@ -8,6 +8,7 @@ import { InputPanel } from './InputPanel.tsx'
 const QWEN: ModelPreset = {
   id: 'qwen2.5-7b',
   name: 'Qwen2.5 7B',
+  purpose: 'Capable small model for coding and math',
   total_params: 7_610_000_000,
   layers: 28,
   attention_heads: 28,
@@ -31,6 +32,21 @@ describe('InputPanel', () => {
     expect(setInput).toHaveBeenCalledWith(
       expect.objectContaining({ layers: 28, kv_heads: 4, hidden_size: 3584 }),
     )
+  })
+
+  it("shows the selected model's purpose, and hides it for a custom model", () => {
+    const setInput = vi.fn()
+    render(
+      <InputPanel input={DEFAULT_INPUT} setInput={setInput} modelPresets={[QWEN]} gpuPresets={[]} />,
+    )
+    // Nothing selected yet → no purpose caption.
+    expect(screen.queryByText(QWEN.purpose!)).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Model preset'), { target: { value: 'qwen2.5-7b' } })
+    expect(screen.getByText(QWEN.purpose!)).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Model preset'), { target: { value: 'custom' } })
+    expect(screen.queryByText(QWEN.purpose!)).not.toBeInTheDocument()
   })
 
   it('edits a workload field through setInput', () => {

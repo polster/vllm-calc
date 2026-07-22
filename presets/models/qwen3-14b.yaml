@@ -1,5 +1,6 @@
 id: qwen3-14b
 name: Qwen3 14B
+purpose: "Balanced reasoning and coding with thinking mode"
 total_params: 14768307200
 layers: 40
 attention_heads: 40

@@ -1,5 +1,6 @@
 id: qwen3-4b
 name: Qwen3 4B
+purpose: "Small model with strong reasoning for its size"
 total_params: 4022468096
 layers: 36
 attention_heads: 32

@@ -1,5 +1,6 @@
 id: gemma-3-1b
 name: Gemma 3 1B
+purpose: "Ultra-light edge text tasks and classification"
 total_params: 999885952
 layers: 26
 attention_heads: 4

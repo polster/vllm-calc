@@ -1,5 +1,6 @@
 id: llama-3.1-70b
 name: Llama 3.1 70B
+purpose: "Versatile general-purpose assistant and RAG"
 total_params: 70600000000
 layers: 80
 attention_heads: 64

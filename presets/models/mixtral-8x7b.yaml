@@ -1,5 +1,6 @@
 id: mixtral-8x7b
 name: Mixtral 8x7B
+purpose: "Multilingual MoE for cost-efficient general use"
 total_params: 46700000000
 layers: 32
 attention_heads: 32

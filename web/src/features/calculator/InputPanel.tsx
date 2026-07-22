@@ -106,6 +106,8 @@ export function InputPanel({ input, setInput, modelPresets, gpuPresets }: Props)
   }
 
   const fromPreset = modelId && modelId !== 'custom'
+  const selectedPurpose =
+    fromPreset ? modelPresets.find((m) => m.id === modelId)?.purpose : undefined
 
   return (
     <Tooltip.Provider delayDuration={200}>
@@ -129,6 +131,12 @@ export function InputPanel({ input, setInput, modelPresets, gpuPresets }: Props)
               <option value="custom">Custom…</option>
             </select>
           </div>
+
+          {selectedPurpose && (
+            <p className="col-span-2 -mt-1 text-[11px] text-[var(--muted)]">
+              {selectedPurpose}
+            </p>
+          )}
 
           {fromPreset && (
             <p className="col-span-2 -mt-1 text-[11px] text-[var(--accent)]">

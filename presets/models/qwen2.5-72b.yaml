@@ -1,5 +1,6 @@
 id: qwen2.5-72b
 name: Qwen2.5 72B
+purpose: "Strong general, coding, and math (multilingual)"
 total_params: 72700000000
 layers: 80
 attention_heads: 64

@@ -36,6 +36,19 @@
       "title": "Name",
       "type": "string"
     },
+    "purpose": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "One-line summary of what the model is best for (use-case sweet spot).",
+      "title": "Purpose"
+    },
     "total_params": {
       "description": "Total params (MoE: all experts).",
       "exclusiveMinimum": 0,

@@ -85,6 +85,7 @@ preset at startup, so a merged preset appears in the API, SPA, and CLI after a r
 ```yaml
 id: qwen2.5-32b                 # must equal the filename stem
 name: Qwen2.5 32B
+purpose: "General chat, coding, and math"   # optional: one-line "what it's good for"
 total_params: 32500000000       # TOTAL params. For MoE: ALL experts, not active.
 layers: 64
 attention_heads: 40
@@ -128,6 +129,10 @@ active-per-token count — the calculator sizes stored weights. Set `is_moe: tru
 
 If a model's architecture is genuinely unusual and you can't map it cleanly, set
 `attention_type: other` so the result is honestly flagged rather than silently wrong.
+
+`purpose` is optional editorial text: a single line naming the model's use-case sweet
+spot (e.g. `"Long-context agentic coding and tool calling"`). Keep it to one line and
+don't overclaim — it's a hint shown next to the model picker, not a benchmark.
 
 ### 3. Validate before pushing
 
