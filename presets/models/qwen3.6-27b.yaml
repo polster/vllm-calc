@@ -1,0 +1,13 @@
+id: qwen3.6-27b
+name: Qwen3.6 27B
+total_params: 27781427952
+layers: 64
+attention_heads: 24
+kv_heads: 4
+head_dim: 256
+hidden_size: 5120
+is_moe: false
+attention_type: other
+source: https://huggingface.co/Qwen/Qwen3.6-27B
+last_verified: "2026-07-22"
+vllm_version_checked: "0.13"
