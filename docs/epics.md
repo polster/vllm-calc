@@ -782,7 +782,7 @@ As a user choosing a model, I want each preset to carry a short "what it's good 
 so I can quickly tell which model fits my use case (agentic coding, long-context, general
 chat, …) without leaving the tool. Extends Epic 4's preset schema + contribution theme.
 
-**Status:** Review (2026-07-22).
+**Status:** Done (2026-07-22, reviewed and approved).
 
 **Dev Agent Record (Story 4.4):**
 - **Additive, backward-compatible schema change:** optional `purpose: str | None = None` on the engine's `ModelPreset` (not on `_Provenance`). No engine calc, endpoint, or loader change — the field rides existing Pydantic serialization to API/SPA/CLI (the Epic 4 data-only guarantee). Regenerated `presets/schema/model.schema.json` via `write_schemas`; `gpu.schema.json` byte-unchanged.
