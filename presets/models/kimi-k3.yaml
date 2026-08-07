@@ -1,0 +1,14 @@
+id: kimi-k3
+name: Kimi K3
+purpose: "Frontier-scale hybrid-attention MoE for long-horizon agentic coding and reasoning"
+total_params: 2779931837184
+layers: 93
+attention_heads: 96
+kv_heads: 96
+head_dim: 128
+hidden_size: 7168
+is_moe: true
+attention_type: other
+source: https://huggingface.co/moonshotai/Kimi-K3
+last_verified: "2026-08-07"
+vllm_version_checked: "0.13"
