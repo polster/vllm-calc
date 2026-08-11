@@ -27,7 +27,7 @@ make docker-up          # builds both images and runs the stack
 docker compose -f docker/docker-compose.yml up --build
 ```
 
-Then open the SPA at **http://localhost:5173** — nginx proxies its API calls to the
+Then open the SPA at **http://localhost:8360** — nginx proxies its API calls to the
 backend, so it's a single origin. The API is also exposed directly on
 **http://localhost:8350** for the CLI:
 
@@ -36,6 +36,10 @@ vllm-calc check --api-url http://localhost:8350 --model llama-3.3-70b --gpu a100
 ```
 
 Tear it down with `make docker-down`.
+
+If either host port (`8360` or `8350`) is already taken on your machine, edit the
+host side of the relevant `ports:` mapping in `docker-compose.yml` (e.g. `"8360:80"`
+→ `"8399:80"`) — the container-internal port after the colon must stay unchanged.
 
 ### Backend image only
 

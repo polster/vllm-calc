@@ -90,7 +90,7 @@ presets: ## Validate presets (schema + provenance) — same check as CI
 
 COMPOSE := docker compose -f docker/docker-compose.yml
 
-compose-up: ## Build & run the full stack in Docker (SPA on :5173, API on :8350)
+compose-up: ## Build & run the full stack in Docker (SPA on :8360, API on :8350)
 	$(COMPOSE) up -d --build
 
 compose-down: ## Stop and remove the Docker stack

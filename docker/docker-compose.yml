@@ -3,7 +3,7 @@
 # or simply:
 #   make docker-up
 #
-# Then open the SPA at http://localhost:5173 (nginx proxies /v1/* to the backend,
+# Then open the SPA at http://localhost:8360 (nginx proxies /v1/* to the backend,
 # so it's a single origin — no CORS needed). The API is also exposed directly on
 # http://localhost:8350 for the CLI (`vllm-calc check --api-url http://localhost:8350 ...`).
 
@@ -29,7 +29,7 @@ services:
       dockerfile: Dockerfile
     image: vllm-calc-web
     ports:
-      - "5173:80"
+      - "8360:80"
     depends_on:
       # Wait for the backend's /v1/health check (defined in docker/Dockerfile) so
       # the proxied SPA has a live API on first load.
