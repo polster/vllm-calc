@@ -17,7 +17,7 @@ import vllm_calc_engine
 
 app = typer.Typer(help="vllm-calc — will your model fit on your GPUs?", no_args_is_help=True)
 
-DEFAULT_API_URL = "http://localhost:8000"
+DEFAULT_API_URL = "http://localhost:8350"
 
 # Exit codes.
 _EXIT_FITS = 0

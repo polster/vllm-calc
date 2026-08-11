@@ -15,6 +15,8 @@ WEB := web
 
 # Local demo defaults — the SPA and API run as separate origins, so CORS on the
 # backend must allow the Vite dev server. Override on the command line if needed.
+# Independent of the Docker Compose host port (see docker/docker-compose.yml) —
+# this is the non-Docker `make backend`/`make web` flow, not the containerized one.
 API_PORT := 8000
 WEB_ORIGIN := http://localhost:5173
 
@@ -88,7 +90,7 @@ presets: ## Validate presets (schema + provenance) — same check as CI
 
 COMPOSE := docker compose -f docker/docker-compose.yml
 
-compose-up: ## Build & run the full stack in Docker (SPA on :5173, API on :8000)
+compose-up: ## Build & run the full stack in Docker (SPA on :5173, API on :8350)
 	$(COMPOSE) up -d --build
 
 compose-down: ## Stop and remove the Docker stack

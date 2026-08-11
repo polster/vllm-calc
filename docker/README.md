@@ -29,10 +29,10 @@ docker compose -f docker/docker-compose.yml up --build
 
 Then open the SPA at **http://localhost:5173** — nginx proxies its API calls to the
 backend, so it's a single origin. The API is also exposed directly on
-**http://localhost:8000** for the CLI:
+**http://localhost:8350** for the CLI:
 
 ```sh
-vllm-calc check --api-url http://localhost:8000 --model llama-3.3-70b --gpu a100-80gb:2 --tp 2
+vllm-calc check --api-url http://localhost:8350 --model llama-3.3-70b --gpu a100-80gb:2 --tp 2
 ```
 
 Tear it down with `make docker-down`.
@@ -42,7 +42,7 @@ Tear it down with `make docker-down`.
 ```sh
 # From the repo root (build context = repo root):
 docker build -f docker/Dockerfile -t vllm-calc-backend .
-docker run --rm -p 8000:8000 vllm-calc-backend
+docker run --rm -p 8350:8000 vllm-calc-backend
 ```
 
 ## Configuration (all via environment variables)
