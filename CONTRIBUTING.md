@@ -96,8 +96,17 @@ is_moe: false
 attention_type: standard        # standard | mla | sliding_window | other
 source: https://huggingface.co/Qwen/Qwen2.5-32B      # provenance
 last_verified: "2026-07-10"
-vllm_version_checked: "0.13"
+vllm_version_checked: "0.13"    # the project's baseline (see below), NOT this model's
+                                # own minimum vLLM requirement
 ```
+
+`vllm_version_checked` tracks the project's own baseline vLLM version (the same
+value as `constants.SUPPORTED_VLLM_RANGE`'s lower bound) as of when you verified this
+preset — it is provenance for the *project*, not a claim that this specific model
+needs that vLLM version to serve. If a model genuinely requires a newer vLLM release
+to run at all, note that in `purpose` or the PR description instead of changing this
+field — bumping `SUPPORTED_VLLM_RANGE` itself requires the Epic 4 GPU validation
+harness to actually recalibrate the overhead constants against a real `vllm serve`.
 
 **GPU** (`presets/gpus/<id>.yaml`):
 
