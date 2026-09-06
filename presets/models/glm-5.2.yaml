@@ -1,0 +1,14 @@
+id: glm-5.2
+name: GLM-5.2
+purpose: "Long-horizon agentic coding and reasoning over a 1M-token context"
+total_params: 753329940480
+layers: 78
+attention_heads: 64
+kv_heads: 64
+head_dim: 256
+hidden_size: 6144
+is_moe: true
+attention_type: other
+source: https://huggingface.co/zai-org/GLM-5.2
+last_verified: "2026-09-07"
+vllm_version_checked: "0.23"
