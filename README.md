@@ -35,3 +35,7 @@ cd web && npm run lint && npm run typecheck && npm test && npm run build
 ```
 
 See [docs/](docs/) for the full planning chain (PRD, architecture, UX, epics).
+
+## License
+
+This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.

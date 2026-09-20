@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "vllm-calc-validation"
 version = "0.0.0"
 description = "GPU accuracy validation harness (dev/CI only; never shipped in the runtime image)."
+license = "MIT"
 requires-python = ">=3.13,<3.15"
 dependencies = [
     "vllm-calc-engine",
